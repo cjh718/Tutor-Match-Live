@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "BgZ3nKMQXIVfR7K3TqB5a"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "tutormatch app icon"
+
+[[generated]]
+id = "mV2be-Rt5tPiI1L9w8JBD"
+uri = "file://artifacts/mobile/assets/images/splash.png"
+type = "image"
+title = "tutormatch splash screen"

@@ -1,22 +1,39 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TutorMatch API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User operations
+  - name: tutor-profiles
+    description: Tutor profile operations
+  - name: questions
+    description: Question operations
+  - name: bids
+    description: Bid operations
+  - name: sessions
+    description: Session operations
+  - name: reviews
+    description: Review operations
+  - name: notifications
+    description: Notification operations
+  - name: dashboard
+    description: Dashboard operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +41,1090 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{userId}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /tutor-profiles/{tutorId}:
+    get:
+      operationId: getTutorProfile
+      tags: [tutor-profiles]
+      summary: Get tutor profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tutorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tutor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TutorProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateTutorProfile
+      tags: [tutor-profiles]
+      summary: Update tutor profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tutorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTutorProfileRequest"
+      responses:
+        "200":
+          description: Tutor profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TutorProfile"
+
+  /questions:
+    get:
+      operationId: getQuestions
+      tags: [questions]
+      summary: List questions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Open, Matched, Scheduled, Completed, Cancelled]
+        - name: subject
+          in: query
+          schema:
+            type: string
+        - name: studentId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Create a question
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionRequest"
+      responses:
+        "201":
+          description: Question created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /questions/{questionId}:
+    get:
+      operationId: getQuestion
+      tags: [questions]
+      summary: Get question by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateQuestion
+      tags: [questions]
+      summary: Update question
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuestionRequest"
+      responses:
+        "200":
+          description: Updated question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /bids:
+    get:
+      operationId: getBids
+      tags: [bids]
+      summary: List bids
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: query
+          schema:
+            type: integer
+        - name: tutorId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Pending, Accepted, Rejected]
+      responses:
+        "200":
+          description: List of bids
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bid"
+    post:
+      operationId: createBid
+      tags: [bids]
+      summary: Submit a bid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBidRequest"
+      responses:
+        "201":
+          description: Bid created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bid"
+
+  /bids/{bidId}:
+    get:
+      operationId: getBid
+      tags: [bids]
+      summary: Get bid by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bidId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bid"
+    put:
+      operationId: updateBid
+      tags: [bids]
+      summary: Accept or reject a bid
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bidId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBidRequest"
+      responses:
+        "200":
+          description: Bid updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bid"
+
+  /sessions:
+    get:
+      operationId: getSessions
+      tags: [sessions]
+      summary: List sessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: studentId
+          in: query
+          schema:
+            type: integer
+        - name: tutorId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Pending Confirmation, Confirmed, Completed, Cancelled]
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Create a session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{sessionId}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get session by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateSession
+      tags: [sessions]
+      summary: Update session
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSessionRequest"
+      responses:
+        "200":
+          description: Session updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /reviews:
+    get:
+      operationId: getReviews
+      tags: [reviews]
+      summary: List reviews for a tutor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tutorId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+    post:
+      operationId: createReview
+      tags: [reviews]
+      summary: Submit a review
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewRequest"
+      responses:
+        "201":
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: Get notifications for current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{notificationId}/read:
+    put:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    put:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All notifications marked as read
+
+  /dashboard/student/{studentId}:
+    get:
+      operationId: getStudentDashboard
+      tags: [dashboard]
+      summary: Get student dashboard summary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Student dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentDashboard"
+
+  /dashboard/tutor/{tutorId}:
+    get:
+      operationId: getTutorDashboard
+      tags: [dashboard]
+      summary: Get tutor dashboard summary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tutorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tutor dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TutorDashboard"
+
+  /admin/users:
+    get:
+      operationId: adminGetUsers
+      tags: [users]
+      summary: Admin - list all users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [student, tutor, admin]
+        - name: suspended
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/users/{userId}/suspend:
+    put:
+      operationId: adminSuspendUser
+      tags: [users]
+      summary: Admin - suspend or unsuspend a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuspendUserRequest"
+      responses:
+        "200":
+          description: User suspension updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        role:
+          type: string
+          enum: [student, tutor]
+      required: [name, email, password, role]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required: [token, user]
+
+    User:
+      type: object
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [student, tutor, admin]
+        rating:
+          type: number
+          nullable: true
+        suspended:
+          type: boolean
+        createdDate:
+          type: string
+          format: date-time
+      required: [userId, name, email, role, suspended, createdDate]
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+
+    TutorProfile:
+      type: object
+      properties:
+        tutorId:
+          type: integer
+        subjects:
+          type: array
+          items:
+            type: string
+        education:
+          type: string
+          nullable: true
+        experience:
+          type: string
+          nullable: true
+        hourlyRate:
+          type: number
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        user:
+          $ref: "#/components/schemas/User"
+      required: [tutorId, subjects]
+
+    UpdateTutorProfileRequest:
+      type: object
+      properties:
+        subjects:
+          type: array
+          items:
+            type: string
+        education:
+          type: string
+        experience:
+          type: string
+        hourlyRate:
+          type: number
+        bio:
+          type: string
+
+    Question:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        studentId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        subject:
+          type: string
+        attachmentUrl:
+          type: string
+          nullable: true
+        preferredDuration:
+          type: integer
+          description: Duration in minutes
+        optionalBudget:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum: [Open, Matched, Scheduled, Completed, Cancelled]
+        createdDate:
+          type: string
+          format: date-time
+        student:
+          $ref: "#/components/schemas/User"
+        bidCount:
+          type: integer
+      required: [questionId, studentId, title, description, subject, preferredDuration, status, createdDate, bidCount]
+
+    CreateQuestionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        subject:
+          type: string
+        attachmentUrl:
+          type: string
+        preferredDuration:
+          type: integer
+        optionalBudget:
+          type: number
+      required: [title, description, subject, preferredDuration]
+
+    UpdateQuestionRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [Open, Matched, Scheduled, Completed, Cancelled]
+
+    Bid:
+      type: object
+      properties:
+        bidId:
+          type: integer
+        questionId:
+          type: integer
+        tutorId:
+          type: integer
+        price:
+          type: number
+        message:
+          type: string
+        estimatedDuration:
+          type: integer
+          description: Duration in minutes
+        status:
+          type: string
+          enum: [Pending, Accepted, Rejected]
+        createdDate:
+          type: string
+          format: date-time
+        tutor:
+          $ref: "#/components/schemas/User"
+        tutorProfile:
+          $ref: "#/components/schemas/TutorProfile"
+      required: [bidId, questionId, tutorId, price, message, estimatedDuration, status, createdDate]
+
+    CreateBidRequest:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        price:
+          type: number
+        message:
+          type: string
+        estimatedDuration:
+          type: integer
+      required: [questionId, price, message, estimatedDuration]
+
+    UpdateBidRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [Pending, Accepted, Rejected]
+      required: [status]
+
+    Session:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+        questionId:
+          type: integer
+        studentId:
+          type: integer
+        tutorId:
+          type: integer
+        proposedTime:
+          type: string
+          format: date-time
+          nullable: true
+        tutorCounterTime:
+          type: string
+          format: date-time
+          nullable: true
+        finalTime:
+          type: string
+          format: date-time
+          nullable: true
+        meetingLink:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [Pending Confirmation, Confirmed, Completed, Cancelled]
+        student:
+          $ref: "#/components/schemas/User"
+        tutor:
+          $ref: "#/components/schemas/User"
+        question:
+          $ref: "#/components/schemas/Question"
+      required: [sessionId, questionId, studentId, tutorId, status]
+
+    CreateSessionRequest:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        tutorId:
+          type: integer
+        proposedTime:
+          type: string
+          format: date-time
+      required: [questionId, tutorId, proposedTime]
+
+    UpdateSessionRequest:
+      type: object
+      properties:
+        proposedTime:
+          type: string
+          format: date-time
+        tutorCounterTime:
+          type: string
+          format: date-time
+        finalTime:
+          type: string
+          format: date-time
+        meetingLink:
+          type: string
+        status:
+          type: string
+          enum: [Pending Confirmation, Confirmed, Completed, Cancelled]
+
+    Review:
+      type: object
+      properties:
+        reviewId:
+          type: integer
+        sessionId:
+          type: integer
+        studentId:
+          type: integer
+        tutorId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        reviewText:
+          type: string
+          nullable: true
+        createdDate:
+          type: string
+          format: date-time
+        student:
+          $ref: "#/components/schemas/User"
+      required: [reviewId, sessionId, studentId, tutorId, rating, createdDate]
+
+    CreateReviewRequest:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+        tutorId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        reviewText:
+          type: string
+      required: [sessionId, tutorId, rating]
+
+    Notification:
+      type: object
+      properties:
+        notificationId:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        read:
+          type: boolean
+        relatedId:
+          type: integer
+          nullable: true
+        createdDate:
+          type: string
+          format: date-time
+      required: [notificationId, userId, type, title, message, read, createdDate]
+
+    StudentDashboard:
+      type: object
+      properties:
+        openQuestions:
+          type: integer
+        matchedQuestions:
+          type: integer
+        scheduledSessions:
+          type: integer
+        completedSessions:
+          type: integer
+        totalSpent:
+          type: number
+        pendingBids:
+          type: integer
+        recentQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        upcomingSessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+      required: [openQuestions, matchedQuestions, scheduledSessions, completedSessions, totalSpent, pendingBids, recentQuestions, upcomingSessions]
+
+    SuspendUserRequest:
+      type: object
+      properties:
+        suspended:
+          type: boolean
+      required: [suspended]
+
+    TutorDashboard:
+      type: object
+      properties:
+        openBids:
+          type: integer
+        acceptedBids:
+          type: integer
+        scheduledSessions:
+          type: integer
+        completedSessions:
+          type: integer
+        totalEarned:
+          type: number
+        averageRating:
+          type: number
+        recentBids:
+          type: array
+          items:
+            $ref: "#/components/schemas/Bid"
+        upcomingSessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+      required: [openBids, acceptedBids, scheduledSessions, completedSessions, totalEarned, averageRating, recentBids, upcomingSessions]
