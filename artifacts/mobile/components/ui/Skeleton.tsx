@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { StyleSheet, StyleProp, ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,10 +10,10 @@ import Animated, {
 import { useColors } from "@/hooks/useColors";
 
 interface SkeletonProps {
-  width?: number | string;
-  height?: number | string;
+  width?: number | `${number}%`;
+  height?: number | `${number}%`;
   borderRadius?: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function Skeleton({ width = "100%", height = 20, borderRadius, style }: SkeletonProps) {

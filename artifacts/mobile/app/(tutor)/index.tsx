@@ -63,7 +63,7 @@ export default function TutorDashboardScreen() {
         <Text style={{ color: colors.mutedForeground }}>No recent bids.</Text>
       ) : (
         dashboard?.recentBids?.map(bid => (
-          <Link key={bid.bidId} href={`/(tutor)/question/${bid.questionId}`} asChild>
+          <Link key={bid.bidId} href={`/question/${bid.questionId}`} asChild>
             <Card style={styles.itemCard}>
               <Text style={[styles.itemTitle, { color: colors.foreground }]}>SGD {bid.price} - {bid.status}</Text>
               <Text style={{ color: colors.mutedForeground }}>{bid.message}</Text>

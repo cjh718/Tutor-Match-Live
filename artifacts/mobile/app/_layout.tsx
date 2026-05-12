@@ -16,20 +16,24 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false, headerBackTitle: "Back" }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="auth/login" />
-      <Stack.Screen name="auth/register" />
-      <Stack.Screen name="(student)" />
-      <Stack.Screen name="(tutor)" />
-      <Stack.Screen name="(admin)" />
+    <Stack screenOptions={{ headerBackTitle: "Back" }}>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/register" options={{ headerShown: false }} />
+      <Stack.Screen name="(student)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tutor)" options={{ headerShown: false }} />
+      <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+      <Stack.Screen name="post-question" options={{ title: "Post a Question", headerShown: true }} />
+      <Stack.Screen name="question/[id]" options={{ title: "Question", headerShown: true }} />
+      <Stack.Screen name="propose-time" options={{ title: "Propose Time", headerShown: true }} />
+      <Stack.Screen name="session/[id]" options={{ title: "Session", headerShown: true }} />
+      <Stack.Screen name="notifications" options={{ title: "Notifications", headerShown: true }} />
     </Stack>
   );
 }

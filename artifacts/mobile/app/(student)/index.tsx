@@ -63,7 +63,7 @@ export default function StudentDashboardScreen() {
         <Text style={{ color: colors.mutedForeground }}>No recent questions.</Text>
       ) : (
         dashboard?.recentQuestions?.map(q => (
-          <Link key={q.questionId} href={`/(student)/question/${q.questionId}`} asChild>
+          <Link key={q.questionId} href={`/question/${q.questionId}`} asChild>
             <Card style={styles.itemCard}>
               <Text style={[styles.itemTitle, { color: colors.foreground }]}>{q.title}</Text>
               <Text style={{ color: colors.mutedForeground }}>{q.subject} • {q.status}</Text>

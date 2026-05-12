@@ -1,8 +1,8 @@
-import { StyleSheet, View, ViewStyle, ViewProps } from "react-native";
+import { StyleSheet, View, ViewStyle, ViewProps, StyleProp } from "react-native";
 import { useColors } from "@/hooks/useColors";
 
 interface CardProps extends ViewProps {
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function Card({ style, children, ...props }: CardProps) {
