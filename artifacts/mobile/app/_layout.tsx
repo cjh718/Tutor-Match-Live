@@ -5,6 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { Feather } from "@expo/vector-icons";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -33,6 +34,7 @@ function RootLayoutNav() {
       <Stack.Screen name="propose-time" options={{ title: "Propose Time", headerShown: true }} />
       <Stack.Screen name="session/[id]" options={{ title: "Session", headerShown: true }} />
       <Stack.Screen name="notifications" options={{ title: "Notifications", headerShown: true }} />
+      <Stack.Screen name="edit-question" options={{ title: "Edit Question", headerShown: true }} />
     </Stack>
   );
 }
@@ -43,6 +45,7 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    ...Feather.font,
   });
 
   useEffect(() => {

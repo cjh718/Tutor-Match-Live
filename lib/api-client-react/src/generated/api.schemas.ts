@@ -126,6 +126,11 @@ export const UpdateQuestionRequestStatus = {
 } as const;
 
 export interface UpdateQuestionRequest {
+  title?: string;
+  description?: string;
+  subject?: string;
+  preferredDuration?: number;
+  optionalBudget?: number | null;
   status?: UpdateQuestionRequestStatus;
 }
 

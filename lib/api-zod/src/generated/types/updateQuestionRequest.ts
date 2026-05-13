@@ -8,5 +8,10 @@
 import type { UpdateQuestionRequestStatus } from "./updateQuestionRequestStatus";
 
 export interface UpdateQuestionRequest {
+  title?: string;
+  description?: string;
+  subject?: string;
+  preferredDuration?: number;
+  optionalBudget?: number | null;
   status?: UpdateQuestionRequestStatus;
 }

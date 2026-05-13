@@ -53,7 +53,7 @@ export default function StudentQuestionsScreen() {
         scrollEnabled={sorted.length > 0}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
-          <EmptyState icon="help-circle" title="No questions yet" description="Post your first question to get matched with a tutor." />
+          <EmptyState icon="inbox" title="No questions yet" description="Post your first question to get matched with a tutor." />
         }
         renderItem={({ item: q }) => (
           <Pressable onPress={() => router.push(`/question/${q.questionId}`)}>

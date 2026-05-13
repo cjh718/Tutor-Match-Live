@@ -1,25 +1,46 @@
-import { ScrollView, StyleSheet, Text, View, Alert, Platform } from 'react-native';
-import { router } from 'expo-router';
-import { useCreateQuestion } from '@workspace/api-client-react';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, Alert } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useGetQuestion, useUpdateQuestion, getGetQuestionQueryKey, getGetQuestionsQueryKey } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { View } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
 
-export default function PostQuestionScreen() {
+export default function EditQuestionScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const questionId = parseInt(id, 10);
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const createQuestion = useCreateQuestion();
+  const { user } = useAuth();
+
+  const { data: question, isLoading } = useGetQuestion(questionId, {
+    query: { enabled: !!questionId, queryKey: getGetQuestionQueryKey(questionId) }
+  });
+
+  const updateQuestion = useUpdateQuestion();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subject, setSubject] = useState('');
-  const [duration, setDuration] = useState('60');
+  const [duration, setDuration] = useState('');
   const [budget, setBudget] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (question) {
+      setTitle(question.title);
+      setDescription(question.description);
+      setSubject(question.subject);
+      setDuration(String(question.preferredDuration));
+      setBudget(question.optionalBudget != null ? String(question.optionalBudget) : '');
+    }
+  }, [question]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -31,30 +52,48 @@ export default function PostQuestionScreen() {
     return e;
   };
 
-  const handleSubmit = async () => {
+  const handleSave = async () => {
     const e = validate();
-    if (Object.keys(e).length > 0) {
-      setErrors(e);
-      return;
-    }
+    if (Object.keys(e).length > 0) { setErrors(e); return; }
+
     try {
-      await createQuestion.mutateAsync({
+      await updateQuestion.mutateAsync({
+        questionId,
         data: {
           title: title.trim(),
           description: description.trim(),
           subject: subject.trim(),
           preferredDuration: parseInt(duration, 10),
-          optionalBudget: budget ? parseFloat(budget) : undefined,
+          optionalBudget: budget ? parseFloat(budget) : null,
         }
       });
+      await queryClient.invalidateQueries({ queryKey: getGetQuestionQueryKey(questionId) });
       await queryClient.invalidateQueries({ queryKey: ['/api/questions'] });
-      Alert.alert('Question posted', 'Tutors will start submitting bids.', [
+      Alert.alert('Saved', 'Your question has been updated.', [
         { text: 'OK', onPress: () => router.back() }
       ]);
     } catch {
-      Alert.alert('Error', 'Failed to post question. Please try again.');
+      Alert.alert('Error', 'Failed to save changes. Please try again.');
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
+        <Skeleton height={56} style={{ marginBottom: 16 }} />
+        <Skeleton height={56} style={{ marginBottom: 16 }} />
+        <Skeleton height={120} />
+      </View>
+    );
+  }
+
+  if (!question || question.status !== 'Open') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
+        <Text style={{ color: colors.mutedForeground }}>This question cannot be edited.</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -62,9 +101,9 @@ export default function PostQuestionScreen() {
       contentContainerStyle={[styles.content, { paddingTop: 24, paddingBottom: insets.bottom + 40 }]}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={[styles.heading, { color: colors.foreground }]}>Ask a Question</Text>
+      <Text style={[styles.heading, { color: colors.foreground }]}>Edit Question</Text>
       <Text style={[styles.subheading, { color: colors.mutedForeground }]}>
-        Describe what you need help with and tutors will bid to assist you.
+        You can edit this question while it's still Open.
       </Text>
 
       <Input
@@ -109,12 +148,18 @@ export default function PostQuestionScreen() {
       />
 
       <Button
-        title="Post Question"
+        title="Save Changes"
         variant="primary"
-        onPress={handleSubmit}
-        loading={createQuestion.isPending}
+        onPress={handleSave}
+        loading={updateQuestion.isPending}
         style={{ marginTop: 8 }}
         size="lg"
+      />
+      <Button
+        title="Cancel"
+        variant="outline"
+        onPress={() => router.back()}
+        style={{ marginTop: 12 }}
       />
     </ScrollView>
   );

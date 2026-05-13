@@ -138,15 +138,38 @@ router.put("/questions/:questionId", authMiddleware, async (req, res): Promise<v
     return;
   }
 
-  const { status } = req.body as { status?: string };
-  if (!status) {
-    res.status(400).json({ error: "Status is required" });
+  const { status, title, description, subject, preferredDuration, optionalBudget } = req.body as {
+    status?: string;
+    title?: string;
+    description?: string;
+    subject?: string;
+    preferredDuration?: number;
+    optionalBudget?: number | null;
+  };
+
+  // Build update payload — only allow content edits when still Open
+  const updateData: Partial<typeof questionsTable.$inferInsert> = {};
+
+  if (status) {
+    updateData.status = status as "Open" | "Matched" | "Scheduled" | "Completed" | "Cancelled";
+  }
+
+  if (existing.status === "Open") {
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (subject !== undefined) updateData.subject = subject;
+    if (preferredDuration !== undefined) updateData.preferredDuration = preferredDuration;
+    if (optionalBudget !== undefined) updateData.optionalBudget = optionalBudget;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    res.status(400).json({ error: "Nothing to update" });
     return;
   }
 
   const [question] = await db
     .update(questionsTable)
-    .set({ status: status as "Open" | "Matched" | "Scheduled" | "Completed" | "Cancelled" })
+    .set(updateData)
     .where(eq(questionsTable.questionId, questionId))
     .returning();
 

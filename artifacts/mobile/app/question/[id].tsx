@@ -53,6 +53,8 @@ export default function QuestionDetailScreen() {
   const { data: question, isLoading: qLoading, refetch } = useGetQuestion(questionId, {
     query: { enabled: !!questionId, queryKey: getGetQuestionQueryKey(questionId) }
   });
+
+  const isOwner = isStudent && question?.studentId === user?.userId;
   const { data: bids, isLoading: bLoading, refetch: refetchBids } = useGetBids(
     { questionId },
     { query: { enabled: !!questionId, queryKey: getGetBidsQueryKey({ questionId }) } }
@@ -160,6 +162,17 @@ export default function QuestionDetailScreen() {
           </View>
         </View>
       </Card>
+
+      {/* Student: edit button when Open and owner */}
+      {isOwner && question.status === 'Open' && (
+        <Button
+          title="Edit Question"
+          variant="outline"
+          onPress={() => router.push(`/edit-question?id=${questionId}`)}
+          style={{ marginBottom: 16 }}
+          icon={<Feather name="edit-2" size={15} color={colors.foreground} />}
+        />
+      )}
 
       {/* Tutor: bid form or existing bid */}
       {isTutor && question.status === 'Open' && (

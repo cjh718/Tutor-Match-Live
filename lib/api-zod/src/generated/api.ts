@@ -247,6 +247,11 @@ export const UpdateQuestionParams = zod.object({
 });
 
 export const UpdateQuestionBody = zod.object({
+  title: zod.string().optional(),
+  description: zod.string().optional(),
+  subject: zod.string().optional(),
+  preferredDuration: zod.number().optional(),
+  optionalBudget: zod.number().nullish(),
   status: zod
     .enum(["Open", "Matched", "Scheduled", "Completed", "Cancelled"])
     .optional(),

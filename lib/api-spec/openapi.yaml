@@ -889,6 +889,17 @@ components:
     UpdateQuestionRequest:
       type: object
       properties:
+        title:
+          type: string
+        description:
+          type: string
+        subject:
+          type: string
+        preferredDuration:
+          type: integer
+        optionalBudget:
+          type: number
+          nullable: true
         status:
           type: string
           enum: [Open, Matched, Scheduled, Completed, Cancelled]
