@@ -16,7 +16,9 @@ function stripPassword(user: typeof usersTable.$inferSelect) {
 router.post("/auth/register", async (req, res): Promise<void> => {
   const parsed = RegisterUserBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    const firstIssue = parsed.error.issues[0];
+    const message = firstIssue ? firstIssue.message : "Invalid request";
+    res.status(400).json({ error: message });
     return;
   }
   const { name, email, password, role } = parsed.data;
@@ -48,7 +50,9 @@ router.post("/auth/register", async (req, res): Promise<void> => {
 router.post("/auth/login", async (req, res): Promise<void> => {
   const parsed = LoginUserBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    const firstIssue = parsed.error.issues[0];
+    const message = firstIssue ? firstIssue.message : "Invalid request";
+    res.status(400).json({ error: message });
     return;
   }
   const { email, password } = parsed.data;

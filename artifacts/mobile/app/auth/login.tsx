@@ -18,15 +18,21 @@ export default function LoginScreen() {
   
   const loginMutation = useLoginUser();
 
+  const isValidEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
     try {
       const response = await loginMutation.mutateAsync({
-        data: { email, password }
+        data: { email: email.trim().toLowerCase(), password }
       });
       await login(response.token, response.user);
       
@@ -38,7 +44,8 @@ export default function LoginScreen() {
         router.replace('/(admin)');
       }
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+      const msg = error?.data?.error || error.message || 'Invalid credentials';
+      Alert.alert('Login Failed', msg);
     }
   };
 

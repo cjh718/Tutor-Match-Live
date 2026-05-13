@@ -22,15 +22,25 @@ export default function RegisterScreen() {
   
   const registerMutation = useRegisterUser();
 
+  const isValidEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+
   const handleRegister = async () => {
-    if (!name || !email || !password) {
+    if (!name.trim() || !email.trim() || !password) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
     try {
       const response = await registerMutation.mutateAsync({
-        data: { name, email, password, role }
+        data: { name: name.trim(), email: email.trim().toLowerCase(), password, role }
       });
       await login(response.token, response.user);
       
@@ -40,7 +50,8 @@ export default function RegisterScreen() {
         router.replace('/(tutor)');
       }
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message || 'Something went wrong');
+      const msg = error?.data?.error || error.message || 'Something went wrong';
+      Alert.alert('Registration Failed', msg);
     }
   };
 
