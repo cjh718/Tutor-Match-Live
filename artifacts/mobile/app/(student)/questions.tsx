@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import {
   FlatList,
   Pressable,
@@ -94,8 +93,8 @@ export default function StudentQuestionsScreen() {
           />
         }
         renderItem={({ item: q }) => (
-          <Card style={styles.card}>
-            <Pressable onPress={() => router.push(`/question/${q.questionId}`)}>
+          <Pressable onPress={() => router.push(`/question/${q.questionId}`)}>
+            <Card style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text
                   style={[styles.title, { color: colors.foreground }]}
@@ -151,67 +150,8 @@ export default function StudentQuestionsScreen() {
                   </View>
                 )}
               </View>
-            </Pressable>
-
-            {/* ========== ADD EDIT & DELETE BUTTONS HERE ========== */}
-            {q.status === "Open" && (
-              <View style={styles.buttonContainer}>
-                <Pressable
-                  style={[
-                    styles.actionButton,
-                    { backgroundColor: colors.secondary },
-                  ]}
-                  onPress={() =>
-                    router.push(`/edit-question?questionId=${q.questionId}`)
-                  }
-                >
-                  <Feather name="edit-2" size={16} color={colors.foreground} />
-                  <Text
-                    style={[styles.actionText, { color: colors.foreground }]}
-                  >
-                    Edit
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  style={[
-                    styles.actionButton,
-                    { backgroundColor: colors.destructive },
-                  ]}
-                  onPress={async () => {
-                    Alert.alert(
-                      "Delete Question",
-                      "Are you sure? This cannot be undone.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: async () => {
-                            try {
-                              // You'll need to import useDeleteQuestion or use fetch
-                              await fetch(`/api/questions/${q.questionId}`, {
-                                method: "DELETE",
-                              });
-                              refetch(); // Refresh the list
-                            } catch (error) {
-                              Alert.alert("Error", "Failed to delete");
-                            }
-                          },
-                        },
-                      ],
-                    );
-                  }}
-                >
-                  <Feather name="trash-2" size={16} color="#fff" />
-                  <Text style={[styles.actionText, { color: "#fff" }]}>
-                    Delete
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-            {/* ========== END OF ADDED BUTTONS ========== */}
-          </Card>
+            </Card>
+          </Pressable>
         )}
       />
       <Pressable
