@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import {
   FlatList,
   Pressable,
@@ -158,7 +157,7 @@ export default function StudentQuestionsScreen() {
       <Pressable
         style={[
           styles.fab,
-          { backgroundColor: colors.primary, bottom: insets.bottom + 90 },
+          { backgroundColor: colors.primary, bottom: insets.bottom + 30 },
         ]}
         onPress={() => router.push("/post-question")}
       >

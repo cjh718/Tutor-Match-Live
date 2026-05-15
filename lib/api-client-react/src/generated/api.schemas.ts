@@ -149,7 +149,6 @@ export interface Bid {
   price: number;
   message: string;
   /** Duration in minutes */
-  estimatedDuration: number;
   status: BidStatus;
   createdDate: string;
   tutor?: User;
@@ -160,7 +159,6 @@ export interface CreateBidRequest {
   questionId: number;
   price: number;
   message: string;
-  estimatedDuration: number;
 }
 
 export type UpdateBidRequestStatus =

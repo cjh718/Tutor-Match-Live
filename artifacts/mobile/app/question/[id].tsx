@@ -33,8 +33,10 @@ import { useState } from "react";
 
 function statusVariant(status: string) {
   if (status === "Open") return "blue";
+  if (status === "BidReceived") return "info";
   if (status === "Matched") return "warning";
-  if (status === "Scheduled") return "success";
+  if (status === "PendingConfirmation") return "warning";
+  if (status === "Confirmed") return "success";
   if (status === "Completed") return "outline";
   return "destructive";
 }
@@ -59,7 +61,7 @@ function StarRating({ rating }: { rating: number | null | undefined }) {
 export default function QuestionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const questionId = parseInt(id, 10);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -101,7 +103,6 @@ export default function QuestionDetailScreen() {
   const [showBidForm, setShowBidForm] = useState(false);
   const [bidPrice, setBidPrice] = useState("");
   const [bidMessage, setBidMessage] = useState("");
-  const [bidDuration, setBidDuration] = useState("");
   const [bidErrors, setBidErrors] = useState<Record<string, string>>({});
 
   const myBid = isTutor
@@ -143,23 +144,26 @@ export default function QuestionDetailScreen() {
   const handleSubmitBid = async () => {
     const e: Record<string, string> = {};
     const price = parseFloat(bidPrice);
-    const dur = parseInt(bidDuration, 10);
     if (!bidPrice || isNaN(price) || price <= 0)
       e.price = "Enter a valid price";
     if (!bidMessage.trim()) e.message = "Message is required";
-    if (!bidDuration || isNaN(dur) || dur < 15) e.duration = "Min 15 minutes";
     if (Object.keys(e).length > 0) {
       setBidErrors(e);
       return;
     }
 
     try {
+      console.log("=== SUBMITTING BID ===");
+      console.log("Question ID:", questionId);
+      console.log("Price:", price);
+      console.log("Message:", bidMessage.trim());
+
       await createBid.mutateAsync({
         data: {
           questionId,
           price,
           message: bidMessage.trim(),
-          estimatedDuration: dur,
+          estimatedDuration: 60, // ← ADD THIS - default 60 minutes
         },
       });
       await queryClient.invalidateQueries({
@@ -168,9 +172,15 @@ export default function QuestionDetailScreen() {
       setShowBidForm(false);
       setBidPrice("");
       setBidMessage("");
-      setBidDuration("");
-    } catch {
-      Alert.alert("Error", "Failed to submit bid.");
+    } catch (error: any) {
+      console.log("=== BID SUBMISSION ERROR ===");
+      console.log("Error object:", error);
+      console.log("Error message:", error?.message);
+      console.log("Error response:", error?.response?.data);
+      Alert.alert(
+        "Error",
+        `Failed to submit bid: ${error?.message || "Unknown error"}`,
+      );
     }
   };
 
@@ -261,15 +271,79 @@ export default function QuestionDetailScreen() {
       </Card>
 
       {/* Student: edit button when Open and owner */}
-      {isOwner && question.status === "Open" && (
-        <Button
-          title="Edit Question"
-          variant="outline"
-          onPress={() => router.push(`/edit-question?id=${questionId}`)}
-          style={{ marginBottom: 16 }}
-          icon={<Feather name="edit-2" size={15} color={colors.foreground} />}
-        />
-      )}
+      {isOwner &&
+        (question.status === "Open" ||
+          question.status === "BidReceived" ||
+          question.status === "Matched") && (
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
+            <Button
+              title="Edit Question"
+              variant="outline"
+              onPress={() => router.push(`/edit-question?id=${questionId}`)}
+              style={{ flex: 1 }}
+              icon={
+                <Feather name="edit-2" size={15} color={colors.foreground} />
+              }
+            />
+            <Button
+              title="Delete"
+              variant="destructive"
+              onPress={() => {
+                Alert.alert(
+                  "Delete Question",
+                  "Are you sure? This cannot be undone.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: async () => {
+                        try {
+                          console.log("=== DELETE DEBUG ===");
+                          console.log("Question ID:", questionId);
+                          console.log("Question Status:", question?.status);
+                          console.log("Is Owner:", isOwner);
+                          console.log("User ID:", user?.userId);
+
+                          const url = `/api/questions/${questionId}`;
+                          console.log("Request URL:", url);
+
+                          const response = await fetch(url, {
+                            method: "DELETE",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${token}`,
+                            },
+                          });
+
+                          console.log("Response status:", response.status);
+                          const responseText = await response.text();
+                          console.log("Response body:", responseText);
+
+                          if (response.ok) {
+                            console.log("Delete successful, going back");
+                            router.back();
+                          } else {
+                            console.log("Delete failed");
+                            Alert.alert(
+                              "Error",
+                              `Failed to delete: ${response.status}`,
+                            );
+                          }
+                        } catch (error) {
+                          console.log("Network error:", error);
+                          Alert.alert("Error", "Network error occurred");
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}
+              style={{ flex: 1 }}
+              icon={<Feather name="trash-2" size={15} color="#fff" />}
+            />
+          </View>
+        )}
 
       {/* Tutor: bid form or existing bid */}
       {isTutor && question.status === "Open" && (
@@ -293,7 +367,7 @@ export default function QuestionDetailScreen() {
                 />
               </View>
               <Text style={[styles.myBidPrice, { color: colors.foreground }]}>
-                SGD {myBid.price.toFixed(2)} • {myBid.estimatedDuration} min
+                SGD {myBid.price.toFixed(2)}
               </Text>
               <Text
                 style={[styles.myBidMessage, { color: colors.mutedForeground }]}
@@ -303,12 +377,18 @@ export default function QuestionDetailScreen() {
             </Card>
           ) : showBidForm ? (
             <Card style={styles.bidFormCard}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: colors.foreground, marginBottom: 16 },
+                ]}
+              >
                 Submit a Bid
               </Text>
+
               <Input
                 label="Your Price (SGD)"
-                placeholder="50"
+                placeholder="Input your best bid"
                 value={bidPrice}
                 onChangeText={(t) => {
                   setBidPrice(t);
@@ -317,17 +397,7 @@ export default function QuestionDetailScreen() {
                 keyboardType="decimal-pad"
                 error={bidErrors.price}
               />
-              <Input
-                label="Estimated Duration (min)"
-                placeholder="60"
-                value={bidDuration}
-                onChangeText={(t) => {
-                  setBidDuration(t);
-                  setBidErrors((e) => ({ ...e, duration: "" }));
-                }}
-                keyboardType="number-pad"
-                error={bidErrors.duration}
-              />
+
               <Input
                 label="Message to Student"
                 placeholder="Why are you the right tutor for this?"
@@ -435,9 +505,7 @@ export default function QuestionDetailScreen() {
                       styles.bidMetaText,
                       { color: colors.mutedForeground },
                     ]}
-                  >
-                    {bid.estimatedDuration} min
-                  </Text>
+                  ></Text>
                   {bid.tutorProfile?.hourlyRate != null && (
                     <>
                       <Feather

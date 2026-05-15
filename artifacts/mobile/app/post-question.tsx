@@ -57,7 +57,10 @@ export default function PostQuestionScreen() {
       ]);
     } catch (error: any) {
       console.log("Full error:", error);
-      Alert.alert("Error", error?.message || "Failed to post question. Please try again.");
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to post question. Please try again.",
+      );
     }
   };
 

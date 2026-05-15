@@ -49,7 +49,7 @@ router.post("/bids", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  const { questionId, price, message, estimatedDuration } = req.body as {
+  const { questionId, price, message } = req.body as {
     questionId?: number;
     price?: number;
     message?: string;
@@ -71,7 +71,8 @@ router.post("/bids", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  if (question.status !== "Open") {
+  // Allow bids on "Open" or "BidReceived"
+  if (question.status !== "Open" && question.status !== "BidReceived") {
     res.status(400).json({ error: "Question is no longer open for bids" });
     return;
   }
@@ -86,6 +87,14 @@ router.post("/bids", authMiddleware, async (req, res): Promise<void> => {
       estimatedDuration,
     })
     .returning();
+
+  // If status was "Open", change to "BidReceived"
+  if (question.status === "Open") {
+    await db
+      .update(questionsTable)
+      .set({ status: "BidReceived" })
+      .where(eq(questionsTable.questionId, questionId));
+  }
 
   const [tutor] = await db
     .select()
@@ -150,11 +159,14 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
       res.status(403).json({ error: "Only the student who posted can accept bids" });
       return;
     }
+
+    // Reject all other pending bids for this question
     await db
       .update(bidsTable)
       .set({ status: "Rejected" })
       .where(and(eq(bidsTable.questionId, existing.questionId), eq(bidsTable.status, "Pending")));
 
+    // Update question status to "Matched"
     await db
       .update(questionsTable)
       .set({ status: "Matched" })

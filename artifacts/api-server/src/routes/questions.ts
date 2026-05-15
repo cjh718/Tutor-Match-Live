@@ -1,4 +1,4 @@
-import { db, questionsTable, usersTable, bidsTable } from "@workspace/db";
+import { db, questionsTable, usersTable, bidsTable, sessionsTable } from "@workspace/db";
 import { and, count, eq, SQL } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { authMiddleware } from "../middlewares/auth";
@@ -22,7 +22,14 @@ router.get("/questions", authMiddleware, async (req, res): Promise<void> => {
     conditions.push(
       eq(
         questionsTable.status,
-        status as "Open" | "Matched" | "Scheduled" | "Completed" | "Cancelled",
+        status as
+          | "Open"
+          | "BidReceived"
+          | "Matched"
+          | "PendingConfirmation"
+          | "Confirmed"
+          | "Completed"
+          | "Cancelled",
       ),
     );
   if (subject) conditions.push(eq(questionsTable.subject, subject));
@@ -193,8 +200,10 @@ router.put(
     if (status) {
       updateData.status = status as
         | "Open"
+        | "BidReceived"
         | "Matched"
-        | "Scheduled"
+        | "PendingConfirmation"
+        | "Confirmed"
         | "Completed"
         | "Cancelled";
     }
@@ -267,18 +276,31 @@ router.delete(
       return;
     }
 
-    // Prevent deletion if question already has bids or is in progress
-    if (existing.status !== "Open") {
-      res
-        .status(400)
-        .json({
-          error:
-            "Cannot delete question that is already matched or in progress",
-        });
+    // Only prevent deletion for certain statuses
+    if (
+      existing.status === "Matched" ||
+      existing.status === "PendingConfirmation" ||
+      existing.status === "Confirmed" ||
+      existing.status === "Completed"
+    ) {
+      res.status(400).json({
+        error:
+          "Cannot delete question that is already in progress or completed",
+      });
       return;
     }
 
-    // Delete the question
+    // ✅ DELETE RELATED BIDS FIRST
+    await db
+      .delete(bidsTable)
+      .where(eq(bidsTable.questionId, questionId));
+
+    // ✅ DELETE ANY RELATED SESSIONS
+    await db
+      .delete(sessionsTable)
+      .where(eq(sessionsTable.questionId, questionId));
+
+    // Then delete the question
     await db
       .delete(questionsTable)
       .where(eq(questionsTable.questionId, questionId));

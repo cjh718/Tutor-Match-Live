@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  Pressable,
 } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -15,7 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 
 export default function TutorDashboardScreen() {
   const { user } = useAuth();
@@ -66,32 +67,85 @@ export default function TutorDashboardScreen() {
         Welcome, {user?.name}
       </Text>
 
+      {/* 2x2 Grid Layout */}
       <View style={styles.statsGrid}>
-        <Card style={styles.statCard}>
-          <Feather name="file-text" size={24} color={colors.primary} />
-          <Text style={[styles.statValue, { color: colors.foreground }]}>
-            {dashboard?.openBids || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Open Bids
-          </Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Feather name="calendar" size={24} color={colors.success} />
-          <Text style={[styles.statValue, { color: colors.foreground }]}>
-            {dashboard?.scheduledSessions || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Upcoming Sessions
-          </Text>
-        </Card>
-        <Card style={styles.statCard}>
+        {/* Row 1 */}
+        <View style={styles.row}>
+          {/* Open Bids Card */}
+          <Pressable
+            onPress={() => router.push("/(tutor)/browse")}
+            style={styles.halfCard}
+          >
+            <Card style={styles.statCard}>
+              <Feather name="file-text" size={24} color={colors.primary} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                {dashboard?.openBids || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Open Bids
+              </Text>
+            </Card>
+          </Pressable>
+
+          {/* Accepted Bids (Pending Confirmation) Card */}
+          <Pressable
+            onPress={() => router.push("/(tutor)/sessions?status=pending")}
+            style={styles.halfCard}
+          >
+            <Card style={styles.statCard}>
+              <Feather name="clock" size={24} color={colors.warning || "#f59e0b"} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                {dashboard?.acceptedBids || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Accepted Bids
+              </Text>
+            </Card>
+          </Pressable>
+        </View>
+
+        {/* Row 2 */}
+        <View style={styles.row}>
+          {/* Upcoming Sessions Card */}
+          <Pressable
+            onPress={() => router.push("/(tutor)/sessions")}
+            style={styles.halfCard}
+          >
+            <Card style={styles.statCard}>
+              <Feather name="calendar" size={24} color={colors.success} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                {dashboard?.scheduledSessions || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Upcoming Sessions
+              </Text>
+            </Card>
+          </Pressable>
+
+          {/* Total Completed Card */}
+          <View style={styles.halfCard}>
+            <Card style={styles.statCard}>
+              <Feather name="check-circle" size={24} color={colors.success} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                {dashboard?.completedSessions || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Completed
+              </Text>
+            </Card>
+          </View>
+        </View>
+      </View>
+
+      {/* Earned Section */}
+      <View style={styles.earnedContainer}>
+        <Card style={styles.earnedCard}>
           <Feather name="dollar-sign" size={24} color={colors.accent} />
-          <Text style={[styles.statValue, { color: colors.foreground }]}>
+          <Text style={[styles.earnedValue, { color: colors.accent }]}>
             SGD {dashboard?.totalEarned || 0}
           </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Earned
+          <Text style={[styles.earnedLabel, { color: colors.mutedForeground }]}>
+            Total Earned
           </Text>
         </Card>
       </View>
@@ -132,14 +186,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   statsGrid: {
+    marginBottom: 24,
+  },
+  row: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 12,
+  },
+  halfCard: {
+    flex: 1,
   },
   statCard: {
-    flex: 1,
-    minWidth: "45%",
     padding: 16,
     gap: 8,
   },
@@ -148,6 +205,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   statLabel: {
+    fontSize: 14,
+  },
+  earnedContainer: {
+    marginBottom: 24,
+  },
+  earnedCard: {
+    padding: 20,
+    alignItems: "center",
+    gap: 8,
+  },
+  earnedValue: {
+    fontSize: 32,
+    fontWeight: "700",
+  },
+  earnedLabel: {
     fontSize: 14,
   },
   sectionTitle: {

@@ -1,4 +1,10 @@
-import { db, sessionsTable, usersTable, questionsTable, bidsTable } from "@workspace/db";
+import {
+  db,
+  sessionsTable,
+  usersTable,
+  questionsTable,
+  bidsTable,
+} from "@workspace/db";
 import { and, eq, SQL } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { authMiddleware } from "../middlewares/auth";
@@ -44,14 +50,20 @@ router.get("/sessions", authMiddleware, async (req, res): Promise<void> => {
   };
 
   const conditions: SQL[] = [];
-  if (studentId) conditions.push(eq(sessionsTable.studentId, parseInt(studentId, 10)));
-  if (tutorId) conditions.push(eq(sessionsTable.tutorId, parseInt(tutorId, 10)));
+  if (studentId)
+    conditions.push(eq(sessionsTable.studentId, parseInt(studentId, 10)));
+  if (tutorId)
+    conditions.push(eq(sessionsTable.tutorId, parseInt(tutorId, 10)));
   if (status) {
     conditions.push(
       eq(
         sessionsTable.status,
-        status as "Pending Confirmation" | "Confirmed" | "Completed" | "Cancelled"
-      )
+        status as
+          | "Pending Confirmation"
+          | "Confirmed"
+          | "Completed"
+          | "Cancelled",
+      ),
     );
   }
 
@@ -91,9 +103,10 @@ router.post("/sessions", authMiddleware, async (req, res): Promise<void> => {
     })
     .returning();
 
+  // Update question status to "PendingConfirmation" (student proposed time, waiting for tutor)
   await db
     .update(questionsTable)
-    .set({ status: "Scheduled" })
+    .set({ status: "PendingConfirmation" })
     .where(eq(questionsTable.questionId, questionId));
 
   const [student] = await db
@@ -117,123 +130,156 @@ router.post("/sessions", authMiddleware, async (req, res): Promise<void> => {
   res.status(201).json(enriched);
 });
 
-router.get("/sessions/:sessionId", authMiddleware, async (req, res): Promise<void> => {
-  const sessionId = parseId(req.params["sessionId"]);
-  if (isNaN(sessionId)) {
-    res.status(400).json({ error: "Invalid session ID" });
-    return;
-  }
+router.get(
+  "/sessions/:sessionId",
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    const sessionId = parseId(req.params["sessionId"]);
+    if (isNaN(sessionId)) {
+      res.status(400).json({ error: "Invalid session ID" });
+      return;
+    }
 
-  const [session] = await db
-    .select()
-    .from(sessionsTable)
-    .where(eq(sessionsTable.sessionId, sessionId));
+    const [session] = await db
+      .select()
+      .from(sessionsTable)
+      .where(eq(sessionsTable.sessionId, sessionId));
 
-  if (!session) {
-    res.status(404).json({ error: "Session not found" });
-    return;
-  }
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
 
-  const enriched = await enrichSession(session);
-  res.json(enriched);
-});
+    const enriched = await enrichSession(session);
+    res.json(enriched);
+  },
+);
 
-router.put("/sessions/:sessionId", authMiddleware, async (req, res): Promise<void> => {
-  const sessionId = parseId(req.params["sessionId"]);
-  if (isNaN(sessionId)) {
-    res.status(400).json({ error: "Invalid session ID" });
-    return;
-  }
+router.put(
+  "/sessions/:sessionId",
+  authMiddleware,
+  async (req, res): Promise<void> => {
+    const sessionId = parseId(req.params["sessionId"]);
+    if (isNaN(sessionId)) {
+      res.status(400).json({ error: "Invalid session ID" });
+      return;
+    }
 
-  const [existing] = await db
-    .select()
-    .from(sessionsTable)
-    .where(eq(sessionsTable.sessionId, sessionId));
+    const [existing] = await db
+      .select()
+      .from(sessionsTable)
+      .where(eq(sessionsTable.sessionId, sessionId));
 
-  if (!existing) {
-    res.status(404).json({ error: "Session not found" });
-    return;
-  }
+    if (!existing) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
 
-  const { proposedTime, tutorCounterTime, finalTime, meetingLink, status } = req.body as {
-    proposedTime?: string;
-    tutorCounterTime?: string;
-    finalTime?: string;
-    meetingLink?: string;
-    status?: string;
-  };
+    const { proposedTime, tutorCounterTime, finalTime, meetingLink, status } =
+      req.body as {
+        proposedTime?: string;
+        tutorCounterTime?: string;
+        finalTime?: string;
+        meetingLink?: string;
+        status?: string;
+      };
 
-  const updates: Partial<typeof sessionsTable.$inferInsert> = {};
-  if (proposedTime !== undefined) updates.proposedTime = new Date(proposedTime);
-  if (tutorCounterTime !== undefined) updates.tutorCounterTime = new Date(tutorCounterTime);
-  if (finalTime !== undefined) updates.finalTime = new Date(finalTime);
-  if (meetingLink !== undefined) updates.meetingLink = meetingLink;
-  if (status !== undefined) {
-    updates.status = status as "Pending Confirmation" | "Confirmed" | "Completed" | "Cancelled";
-  }
+    const updates: Partial<typeof sessionsTable.$inferInsert> = {};
+    if (proposedTime !== undefined)
+      updates.proposedTime = new Date(proposedTime);
+    if (tutorCounterTime !== undefined)
+      updates.tutorCounterTime = new Date(tutorCounterTime);
+    if (finalTime !== undefined) updates.finalTime = new Date(finalTime);
+    if (meetingLink !== undefined) updates.meetingLink = meetingLink;
+    if (status !== undefined) {
+      updates.status = status as
+        | "Pending Confirmation"
+        | "Confirmed"
+        | "Completed"
+        | "Cancelled";
+    }
 
-  const [session] = await db
-    .update(sessionsTable)
-    .set(updates)
-    .where(eq(sessionsTable.sessionId, sessionId))
-    .returning();
+    const [session] = await db
+      .update(sessionsTable)
+      .set(updates)
+      .where(eq(sessionsTable.sessionId, sessionId))
+      .returning();
 
-  const [student] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.userId, session.studentId));
-  const [tutor] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.userId, session.tutorId));
-  const [question] = await db
-    .select()
-    .from(questionsTable)
-    .where(eq(questionsTable.questionId, session.questionId));
-
-  if (tutorCounterTime) {
-    await notify({
-      userId: session.studentId,
-      type: "time_countered",
-      title: "Tutor proposed a different time",
-      message: `${tutor.name} countered the session time for "${question.title}"`,
-      relatedId: sessionId,
-    });
-  }
-
-  if (status === "Confirmed") {
-    const notifyUserId =
-      req.user!.userId === session.studentId ? session.tutorId : session.studentId;
-    const confirmerName =
-      req.user!.userId === session.studentId ? student.name : tutor.name;
-    await notify({
-      userId: notifyUserId,
-      type: "session_confirmed",
-      title: "Session confirmed",
-      message: `${confirmerName} confirmed the session for "${question.title}"`,
-      relatedId: sessionId,
-    });
-  }
-
-  if (meetingLink) {
-    await notify({
-      userId: session.studentId,
-      type: "meeting_link_added",
-      title: "Meeting link added",
-      message: `${tutor.name} added a meeting link for your session`,
-      relatedId: sessionId,
-    });
-  }
-
-  if (status === "Completed") {
-    await db
-      .update(questionsTable)
-      .set({ status: "Completed" })
+    const [student] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.userId, session.studentId));
+    const [tutor] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.userId, session.tutorId));
+    const [question] = await db
+      .select()
+      .from(questionsTable)
       .where(eq(questionsTable.questionId, session.questionId));
-  }
 
-  const enriched = await enrichSession(session);
-  res.json(enriched);
-});
+    if (tutorCounterTime) {
+      await notify({
+        userId: session.studentId,
+        type: "time_countered",
+        title: "Tutor proposed a different time",
+        message: `${tutor.name} countered the session time for "${question.title}"`,
+        relatedId: sessionId,
+      });
+    }
+
+    // When tutor confirms the session
+    if (status === "Confirmed") {
+      // Update question status to "Confirmed"
+      await db
+        .update(questionsTable)
+        .set({ status: "Confirmed" })
+        .where(eq(questionsTable.questionId, session.questionId));
+
+      const notifyUserId =
+        req.user!.userId === session.studentId
+          ? session.tutorId
+          : session.studentId;
+      const confirmerName =
+        req.user!.userId === session.studentId ? student.name : tutor.name;
+      await notify({
+        userId: notifyUserId,
+        type: "session_confirmed",
+        title: "Session confirmed",
+        message: `${confirmerName} confirmed the session for "${question.title}"`,
+        relatedId: sessionId,
+      });
+    }
+
+    if (meetingLink) {
+      await notify({
+        userId: session.studentId,
+        type: "meeting_link_added",
+        title: "Meeting link added",
+        message: `${tutor.name} added a meeting link for your session`,
+        relatedId: sessionId,
+      });
+    }
+
+    // When session is completed
+    if (status === "Completed") {
+      await db
+        .update(questionsTable)
+        .set({ status: "Completed" })
+        .where(eq(questionsTable.questionId, session.questionId));
+    }
+
+    // When session is cancelled
+    if (status === "Cancelled") {
+      await db
+        .update(questionsTable)
+        .set({ status: "Cancelled" })
+        .where(eq(questionsTable.questionId, session.questionId));
+    }
+
+    const enriched = await enrichSession(session);
+    res.json(enriched);
+  },
+);
 
 export default router;

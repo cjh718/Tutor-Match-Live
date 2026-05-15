@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  Pressable,
 } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -15,7 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 
 export default function StudentDashboardScreen() {
   const { user } = useAuth();
@@ -66,34 +67,89 @@ export default function StudentDashboardScreen() {
         Hello, {user?.name}
       </Text>
 
+      {/* 2x2 Grid Layout */}
       <View style={styles.statsGrid}>
-        <Card style={styles.statCard}>
-          <Feather name="help-circle" size={24} color={colors.primary} />
-          <Text style={[styles.statValue, { color: colors.foreground }]}>
-            {dashboard?.openQuestions || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Open Questions
-          </Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Feather name="clock" size={24} color={colors.accent} />
-          <Text style={[styles.statValue, { color: colors.foreground }]}>
-            {dashboard?.pendingBids || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Pending Bids
-          </Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Feather name="calendar" size={24} color={colors.success} />
-          <Text style={[styles.statValue, { color: colors.foreground }]}>
-            {dashboard?.scheduledSessions || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Upcoming Sessions
-          </Text>
-        </Card>
+        {/* Row 1 */}
+        <View style={styles.row}>
+          {/* Open Questions Card */}
+          <Pressable
+            onPress={() => router.push("/(student)/questions")}
+            style={styles.halfCard}
+          >
+            <Card style={styles.statCard}>
+              <Feather name="help-circle" size={24} color={colors.primary} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                {dashboard?.openQuestions || 0}
+              </Text>
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                Open Questions
+              </Text>
+            </Card>
+          </Pressable>
+
+          {/* Pending Bids Card */}
+          <Pressable
+            onPress={() => router.push("/(student)/questions")}
+            style={styles.halfCard}
+          >
+            <Card style={styles.statCard}>
+              <Feather name="clock" size={24} color={colors.accent} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                {dashboard?.pendingBids || 0}
+              </Text>
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                Pending Bids
+              </Text>
+            </Card>
+          </Pressable>
+        </View>
+
+        {/* Row 2 */}
+        <View style={styles.row}>
+          {/* Upcoming Sessions Card */}
+          <Pressable
+            onPress={() => router.push("/(student)/sessions")}
+            style={styles.halfCard}
+          >
+            <Card style={styles.statCard}>
+              <Feather name="calendar" size={24} color={colors.success} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                {dashboard?.scheduledSessions || 0}
+              </Text>
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                Upcoming Sessions
+              </Text>
+            </Card>
+          </Pressable>
+
+          {/* Pending Confirmation Card */}
+          <Pressable
+            onPress={() => router.push("/(student)/sessions?status=pending")}
+            style={styles.halfCard}
+          >
+            <Card style={styles.statCard}>
+              <Feather
+                name="loader"
+                size={24}
+                color={colors.warning || "#f59e0b"}
+              />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                {dashboard?.pendingConfirmation || 0}
+              </Text>
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                Pending Confirmation
+              </Text>
+            </Card>
+          </Pressable>
+        </View>
       </View>
 
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
@@ -105,7 +161,16 @@ export default function StudentDashboardScreen() {
         </Text>
       ) : (
         dashboard?.recentQuestions?.map((q) => (
-          <Link key={q.questionId} href={`/question/${q.questionId}`} asChild>
+          <Pressable 
+            key={q.questionId}
+            onPress={() => {
+              console.log("=== NAVIGATION DEBUG ===");
+              console.log("Question ID:", q.questionId);
+              console.log("Question Title:", q.title);
+              console.log("Navigating to:", `/question/${q.questionId}`);
+              router.push(`/question/${q.questionId}`);
+            }}
+          >
             <Card style={styles.itemCard}>
               <Text style={[styles.itemTitle, { color: colors.foreground }]}>
                 {q.title}
@@ -114,7 +179,7 @@ export default function StudentDashboardScreen() {
                 {q.subject} • {q.status}
               </Text>
             </Card>
-          </Link>
+          </Pressable>
         ))
       )}
     </ScrollView>
@@ -134,14 +199,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
     marginBottom: 32,
   },
-  statCard: {
+  row: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  halfCard: {
     flex: 1,
-    minWidth: "45%",
+  },
+  statCard: {
     padding: 16,
     gap: 8,
   },
