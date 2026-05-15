@@ -32,6 +32,7 @@ export default function PostQuestionScreen() {
     if (!title.trim()) e.title = "Title is required";
     if (!description.trim()) e.description = "Description is required";
     if (!subject.trim()) e.subject = "Subject is required";
+    return e;
   };
 
   const handleSubmit = async () => {
