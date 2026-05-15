@@ -159,16 +159,17 @@ export default function QuestionDetailScreen() {
       console.log("Message:", bidMessage.trim());
 
       // Direct fetch - THIS WILL WORK
-      const response = await fetch('/api/bids', {
-        method: 'POST',
+      const response = await fetch("/api/bids", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           questionId: questionId,
           price: price,
           message: bidMessage.trim(),
+          estimatedDuration: 60, // ← ADD THIS (default 60 minutes)
         }),
       });
 
@@ -194,7 +195,10 @@ export default function QuestionDetailScreen() {
     } catch (error: any) {
       console.log("=== BID SUBMISSION ERROR ===");
       console.log("Error:", error);
-      Alert.alert("Error", `Failed to submit bid: ${error?.message || "Unknown error"}`);
+      Alert.alert(
+        "Error",
+        `Failed to submit bid: ${error?.message || "Unknown error"}`,
+      );
     }
   };
 

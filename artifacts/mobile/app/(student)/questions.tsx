@@ -102,7 +102,10 @@ export default function StudentQuestionsScreen() {
                 >
                   {q.title}
                 </Text>
-                <Badge label={q.status} variant={statusVariant(q.status)} />
+                <Badge 
+                  label={q.status === "BidReceived" ? "Bid Received" : q.status} 
+                  variant={statusVariant(q.status)} 
+                />
               </View>
               <Text style={[styles.subject, { color: colors.mutedForeground }]}>
                 {q.subject}
