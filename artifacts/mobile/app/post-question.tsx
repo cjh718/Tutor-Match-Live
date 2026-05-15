@@ -55,8 +55,9 @@ export default function PostQuestionScreen() {
       Alert.alert("Question posted", "Tutors will start submitting bids.", [
         { text: "OK", onPress: () => router.back() },
       ]);
-    } catch {
-      Alert.alert("Error", "Failed to post question. Please try again.");
+    } catch (error: any) {
+      console.log("Full error:", error);
+      Alert.alert("Error", error?.message || "Failed to post question. Please try again.");
     }
   };
 

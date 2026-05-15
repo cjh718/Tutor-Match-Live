@@ -1,3 +1,15 @@
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Alert,
+  RefreshControl,
+} from "react-native";
+import { useLocalSearchParams, router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useGetQuestion,
@@ -18,18 +30,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  Alert,
-  RefreshControl,
-} from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
-import { Feather, FontAwesome } from "@expo/vector-icons";
 
 function statusVariant(status: string) {
   if (status === "Open") return "blue";
@@ -45,9 +45,9 @@ function StarRating({ rating }: { rating: number | null | undefined }) {
   return (
     <View style={{ flexDirection: "row", gap: 2 }}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <FontAwesome
+        <Feather
           key={i}
-          name={i <= stars ? "star" : "star-o"}
+          name="star"
           size={12}
           color={i <= stars ? colors.accent : colors.border}
         />
@@ -231,6 +231,12 @@ export default function QuestionDetailScreen() {
           {question.description}
         </Text>
         <View style={styles.qMeta}>
+          <View style={styles.metaItem}>
+            <Feather name="clock" size={14} color={colors.mutedForeground} />
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+              {question.preferredDuration} min
+            </Text>
+          </View>
           {question.optionalBudget != null && (
             <View style={styles.metaItem}>
               <Feather
@@ -256,51 +262,13 @@ export default function QuestionDetailScreen() {
 
       {/* Student: edit button when Open and owner */}
       {isOwner && question.status === "Open" && (
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
-          <Button
-            title="Edit Question"
-            variant="outline"
-            onPress={() => router.push(`/edit-question?id=${questionId}`)}
-            style={{ flex: 1 }}
-            icon={<Feather name="edit-2" size={15} color={colors.foreground} />}
-          />
-          <Button
-            title="Delete"
-            variant="destructive"
-            onPress={() => {
-              Alert.alert(
-                "Delete Question",
-                "Are you sure? This cannot be undone.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                      try {
-                        const response = await fetch(
-                          `/api/questions/${questionId}`,
-                          {
-                            method: "DELETE",
-                          },
-                        );
-                        if (response.ok) {
-                          router.back();
-                        } else {
-                          Alert.alert("Error", "Failed to delete question");
-                        }
-                      } catch (error) {
-                        Alert.alert("Error", "Failed to delete question");
-                      }
-                    },
-                  },
-                ],
-              );
-            }}
-            style={{ flex: 1 }}
-            icon={<Feather name="trash-2" size={15} color="#fff" />}
-          />
-        </View>
+        <Button
+          title="Edit Question"
+          variant="outline"
+          onPress={() => router.push(`/edit-question?id=${questionId}`)}
+          style={{ marginBottom: 16 }}
+          icon={<Feather name="edit-2" size={15} color={colors.foreground} />}
+        />
       )}
 
       {/* Tutor: bid form or existing bid */}

@@ -1,3 +1,10 @@
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+} from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useGetStudentDashboard,
@@ -9,15 +16,6 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { Link } from "expo-router";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  Pressable,
-} from "react-native";
-import { router } from "expo-router";
 
 export default function StudentDashboardScreen() {
   const { user } = useAuth();
@@ -69,50 +67,33 @@ export default function StudentDashboardScreen() {
       </Text>
 
       <View style={styles.statsGrid}>
-        <Pressable
-          onPress={() => router.push("/questions")}
-          style={styles.statCard}
-        >
-          <Card style={styles.statCardInner}>
-            <Feather name="help-circle" size={24} color={colors.primary} />
-            <Text style={[styles.statValue, { color: colors.foreground }]}>
-              {dashboard?.openQuestions || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-              Open Questions
-            </Text>
-          </Card>
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/questions")}
-          style={styles.statCard}
-        >
-          <Card style={styles.statCardInner}>
-            <Feather name="clock" size={24} color={colors.accent} />
-            <Text style={[styles.statValue, { color: colors.foreground }]}>
-              {dashboard?.pendingBids || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-              Pending Bids
-            </Text>
-          </Card>
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/sessions")}
-          style={styles.statCard}
-        >
-          <Card style={styles.statCardInner}>
-            <Feather name="calendar" size={24} color={colors.success} />
-            <Text style={[styles.statValue, { color: colors.foreground }]}>
-              {dashboard?.scheduledSessions || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-              Upcoming Sessions
-            </Text>
-          </Card>
-        </Pressable>
+        <Card style={styles.statCard}>
+          <Feather name="help-circle" size={24} color={colors.primary} />
+          <Text style={[styles.statValue, { color: colors.foreground }]}>
+            {dashboard?.openQuestions || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+            Open Questions
+          </Text>
+        </Card>
+        <Card style={styles.statCard}>
+          <Feather name="clock" size={24} color={colors.accent} />
+          <Text style={[styles.statValue, { color: colors.foreground }]}>
+            {dashboard?.pendingBids || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+            Pending Bids
+          </Text>
+        </Card>
+        <Card style={styles.statCard}>
+          <Feather name="calendar" size={24} color={colors.success} />
+          <Text style={[styles.statValue, { color: colors.foreground }]}>
+            {dashboard?.scheduledSessions || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+            Upcoming Sessions
+          </Text>
+        </Card>
       </View>
 
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
@@ -161,10 +142,15 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: "45%",
-  },
-  statCardInner: {
     padding: 16,
     gap: 8,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  statLabel: {
+    fontSize: 14,
   },
   sectionTitle: {
     fontSize: 20,

@@ -1,3 +1,10 @@
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+} from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useGetTutorDashboard,
@@ -8,16 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  Pressable,
-  Alert,
-} from "react-native";
+import { Link } from "expo-router";
 
 export default function TutorDashboardScreen() {
   const { user } = useAuth();
@@ -69,46 +67,25 @@ export default function TutorDashboardScreen() {
       </Text>
 
       <View style={styles.statsGrid}>
-        <Pressable
-          onPress={() => {
-            if (dashboard?.openBids && dashboard.openBids > 0) {
-              router.push("/tutor/browse");
-            } else {
-              Alert.alert(
-                "No Open Bids",
-                "You don't have any open bids to review.",
-              );
-            }
-          }}
-          style={styles.statCard}
-        >
-          <Card style={styles.statCardInner}>
-            <Feather name="file-text" size={24} color={colors.primary} />
-            <Text style={[styles.statValue, { color: colors.foreground }]}>
-              {dashboard?.openBids || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-              Open Bids
-            </Text>
-          </Card>
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/sessions")}
-          style={styles.statCard}
-        >
-          <Card style={styles.statCardInner}>
-            <Feather name="calendar" size={24} color={colors.success} />
-            <Text style={[styles.statValue, { color: colors.foreground }]}>
-              {dashboard?.scheduledSessions || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-              Upcoming Sessions
-            </Text>
-          </Card>
-        </Pressable>
-
-        <Card style={styles.statCardInner}>
+        <Card style={styles.statCard}>
+          <Feather name="file-text" size={24} color={colors.primary} />
+          <Text style={[styles.statValue, { color: colors.foreground }]}>
+            {dashboard?.openBids || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+            Open Bids
+          </Text>
+        </Card>
+        <Card style={styles.statCard}>
+          <Feather name="calendar" size={24} color={colors.success} />
+          <Text style={[styles.statValue, { color: colors.foreground }]}>
+            {dashboard?.scheduledSessions || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+            Upcoming Sessions
+          </Text>
+        </Card>
+        <Card style={styles.statCard}>
           <Feather name="dollar-sign" size={24} color={colors.accent} />
           <Text style={[styles.statValue, { color: colors.foreground }]}>
             SGD {dashboard?.totalEarned || 0}
@@ -163,8 +140,6 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: "45%",
-  },
-  statCardInner: {
     padding: 16,
     gap: 8,
   },
