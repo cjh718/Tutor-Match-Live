@@ -47,7 +47,7 @@ function StarRating({ rating }: { rating: number | null | undefined }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <Feather
           key={i}
-          name="star"
+          name={i <= stars ? "star" : "star"}
           size={12}
           color={i <= stars ? colors.accent : colors.border}
         />
