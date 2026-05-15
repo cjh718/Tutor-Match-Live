@@ -10,5 +10,4 @@ export interface CreateBidRequest {
   questionId: number;
   price: number;
   message: string;
-  estimatedDuration: number;
 }

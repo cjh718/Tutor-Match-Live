@@ -297,7 +297,6 @@ export const GetBidsResponseItem = zod.object({
   tutorId: zod.number(),
   price: zod.number(),
   message: zod.string(),
-  estimatedDuration: zod.number().describe("Duration in minutes"),
   status: zod.enum(["Pending", "Accepted", "Rejected"]),
   createdDate: zod.coerce.date(),
   tutor: zod
@@ -342,7 +341,6 @@ export const CreateBidBody = zod.object({
   questionId: zod.number(),
   price: zod.number(),
   message: zod.string(),
-  estimatedDuration: zod.number(),
 });
 
 /**
@@ -358,7 +356,6 @@ export const GetBidResponse = zod.object({
   tutorId: zod.number(),
   price: zod.number(),
   message: zod.string(),
-  estimatedDuration: zod.number().describe("Duration in minutes"),
   status: zod.enum(["Pending", "Accepted", "Rejected"]),
   createdDate: zod.coerce.date(),
   tutor: zod
@@ -412,7 +409,6 @@ export const UpdateBidResponse = zod.object({
   tutorId: zod.number(),
   price: zod.number(),
   message: zod.string(),
-  estimatedDuration: zod.number().describe("Duration in minutes"),
   status: zod.enum(["Pending", "Accepted", "Rejected"]),
   createdDate: zod.coerce.date(),
   tutor: zod
@@ -924,7 +920,6 @@ export const GetTutorDashboardResponse = zod.object({
       tutorId: zod.number(),
       price: zod.number(),
       message: zod.string(),
-      estimatedDuration: zod.number().describe("Duration in minutes"),
       status: zod.enum(["Pending", "Accepted", "Rejected"]),
       createdDate: zod.coerce.date(),
       tutor: zod

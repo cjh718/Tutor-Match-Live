@@ -15,8 +15,6 @@ export interface Bid {
   tutorId: number;
   price: number;
   message: string;
-  /** Duration in minutes */
-  estimatedDuration: number;
   status: BidStatus;
   createdDate: Date;
   tutor?: User;

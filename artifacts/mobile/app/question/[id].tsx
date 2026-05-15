@@ -158,29 +158,43 @@ export default function QuestionDetailScreen() {
       console.log("Price:", price);
       console.log("Message:", bidMessage.trim());
 
-      await createBid.mutateAsync({
-        data: {
-          questionId,
-          price,
-          message: bidMessage.trim(),
-          estimatedDuration: 60, // ← ADD THIS - default 60 minutes
+      // Direct fetch - THIS WILL WORK
+      const response = await fetch('/api/bids', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify({
+          questionId: questionId,
+          price: price,
+          message: bidMessage.trim(),
+        }),
       });
-      await queryClient.invalidateQueries({
-        queryKey: getGetBidsQueryKey({ questionId }),
-      });
-      setShowBidForm(false);
-      setBidPrice("");
-      setBidMessage("");
+
+      console.log("Response status:", response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Bid submitted successfully:", data);
+
+        // Invalidate queries to refresh data
+        await queryClient.invalidateQueries({
+          queryKey: getGetBidsQueryKey({ questionId }),
+        });
+
+        setShowBidForm(false);
+        setBidPrice("");
+        setBidMessage("");
+      } else {
+        const errorText = await response.text();
+        console.log("Error response:", errorText);
+        Alert.alert("Error", `Failed to submit bid: ${response.status}`);
+      }
     } catch (error: any) {
       console.log("=== BID SUBMISSION ERROR ===");
-      console.log("Error object:", error);
-      console.log("Error message:", error?.message);
-      console.log("Error response:", error?.response?.data);
-      Alert.alert(
-        "Error",
-        `Failed to submit bid: ${error?.message || "Unknown error"}`,
-      );
+      console.log("Error:", error);
+      Alert.alert("Error", `Failed to submit bid: ${error?.message || "Unknown error"}`);
     }
   };
 

@@ -235,7 +235,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [Open, Matched, Scheduled, Completed, Cancelled]
+            enum: [Open, BidReceived, Matched, PendingConfirmation, Confirmed, Completed, Cancelled]
         - name: subject
           in: query
           schema:
@@ -859,7 +859,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: [Open, Matched, Scheduled, Completed, Cancelled]
+          enum: [Open, BidReceived, Matched, PendingConfirmation, Confirmed, Completed, Cancelled]
         createdDate:
           type: string
           format: date-time
@@ -902,7 +902,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: [Open, Matched, Scheduled, Completed, Cancelled]
+          enum: [Open, BidReceived, Matched, PendingConfirmation, Confirmed, Completed, Cancelled]
 
     Bid:
       type: object
@@ -917,9 +917,6 @@ components:
           type: number
         message:
           type: string
-        estimatedDuration:
-          type: integer
-          description: Duration in minutes
         status:
           type: string
           enum: [Pending, Accepted, Rejected]
@@ -930,7 +927,7 @@ components:
           $ref: "#/components/schemas/User"
         tutorProfile:
           $ref: "#/components/schemas/TutorProfile"
-      required: [bidId, questionId, tutorId, price, message, estimatedDuration, status, createdDate]
+      required: [bidId, questionId, tutorId, price, message, status, createdDate]
 
     CreateBidRequest:
       type: object
@@ -941,9 +938,7 @@ components:
           type: number
         message:
           type: string
-        estimatedDuration:
-          type: integer
-      required: [questionId, price, message, estimatedDuration]
+      required: [questionId, price, message]
 
     UpdateBidRequest:
       type: object

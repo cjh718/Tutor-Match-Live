@@ -1,4 +1,10 @@
-import { db, bidsTable, tutorProfilesTable, usersTable, questionsTable } from "@workspace/db";
+import {
+  db,
+  bidsTable,
+  tutorProfilesTable,
+  usersTable,
+  questionsTable,
+} from "@workspace/db";
 import { and, eq, SQL } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { authMiddleware } from "../middlewares/auth";
@@ -12,13 +18,20 @@ function parseId(raw: string | string[]): number {
 }
 
 async function enrichBid(bid: typeof bidsTable.$inferSelect) {
-  const [tutor] = await db.select().from(usersTable).where(eq(usersTable.userId, bid.tutorId));
+  const [tutor] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.userId, bid.tutorId));
   const { password: _, ...tutorWithoutPassword } = tutor;
   const [tutorProfile] = await db
     .select()
     .from(tutorProfilesTable)
     .where(eq(tutorProfilesTable.tutorId, bid.tutorId));
-  return { ...bid, tutor: tutorWithoutPassword, tutorProfile: tutorProfile ?? null };
+  return {
+    ...bid,
+    tutor: tutorWithoutPassword,
+    tutorProfile: tutorProfile ?? null,
+  };
 }
 
 router.get("/bids", authMiddleware, async (req, res): Promise<void> => {
@@ -29,9 +42,13 @@ router.get("/bids", authMiddleware, async (req, res): Promise<void> => {
   };
 
   const conditions: SQL[] = [];
-  if (questionId) conditions.push(eq(bidsTable.questionId, parseInt(questionId, 10)));
+  if (questionId)
+    conditions.push(eq(bidsTable.questionId, parseInt(questionId, 10)));
   if (tutorId) conditions.push(eq(bidsTable.tutorId, parseInt(tutorId, 10)));
-  if (status) conditions.push(eq(bidsTable.status, status as "Pending" | "Accepted" | "Rejected"));
+  if (status)
+    conditions.push(
+      eq(bidsTable.status, status as "Pending" | "Accepted" | "Rejected"),
+    );
 
   const bids = await db
     .select()
@@ -53,10 +70,9 @@ router.post("/bids", authMiddleware, async (req, res): Promise<void> => {
     questionId?: number;
     price?: number;
     message?: string;
-    estimatedDuration?: number;
   };
 
-  if (!questionId || !price || !message || !estimatedDuration) {
+  if (!questionId || !price || !message) {
     res.status(400).json({ error: "Missing required fields" });
     return;
   }
@@ -84,7 +100,6 @@ router.post("/bids", authMiddleware, async (req, res): Promise<void> => {
       tutorId: req.user!.userId,
       price,
       message,
-      estimatedDuration,
     })
     .returning();
 
@@ -120,7 +135,10 @@ router.get("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  const [bid] = await db.select().from(bidsTable).where(eq(bidsTable.bidId, bidId));
+  const [bid] = await db
+    .select()
+    .from(bidsTable)
+    .where(eq(bidsTable.bidId, bidId));
   if (!bid) {
     res.status(404).json({ error: "Bid not found" });
     return;
@@ -137,7 +155,10 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  const [existing] = await db.select().from(bidsTable).where(eq(bidsTable.bidId, bidId));
+  const [existing] = await db
+    .select()
+    .from(bidsTable)
+    .where(eq(bidsTable.bidId, bidId));
   if (!existing) {
     res.status(404).json({ error: "Bid not found" });
     return;
@@ -156,7 +177,9 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
 
   if (status === "Accepted") {
     if (question.studentId !== req.user!.userId) {
-      res.status(403).json({ error: "Only the student who posted can accept bids" });
+      res
+        .status(403)
+        .json({ error: "Only the student who posted can accept bids" });
       return;
     }
 
@@ -164,7 +187,12 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
     await db
       .update(bidsTable)
       .set({ status: "Rejected" })
-      .where(and(eq(bidsTable.questionId, existing.questionId), eq(bidsTable.status, "Pending")));
+      .where(
+        and(
+          eq(bidsTable.questionId, existing.questionId),
+          eq(bidsTable.status, "Pending"),
+        ),
+      );
 
     // Update question status to "Matched"
     await db
