@@ -120,18 +120,7 @@ export default function StudentQuestionsScreen() {
                     {q.bidCount} bid{q.bidCount !== 1 ? "s" : ""}
                   </Text>
                 </View>
-                <View style={styles.metaItem}>
-                  <Feather
-                    name="clock"
-                    size={13}
-                    color={colors.mutedForeground}
-                  />
-                  <Text
-                    style={[styles.metaText, { color: colors.mutedForeground }]}
-                  >
-                    {q.preferredDuration} min
-                  </Text>
-                </View>
+                
                 {q.optionalBudget != null && (
                   <View style={styles.metaItem}>
                     <Feather

@@ -1,15 +1,3 @@
-import {
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  Alert,
-  RefreshControl,
-} from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
-import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useGetQuestion,
@@ -30,6 +18,18 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Alert,
+  RefreshControl,
+} from "react-native";
+import { useLocalSearchParams, router } from "expo-router";
+import { Feather, FontAwesome } from "@expo/vector-icons";
 
 function statusVariant(status: string) {
   if (status === "Open") return "blue";
@@ -45,9 +45,9 @@ function StarRating({ rating }: { rating: number | null | undefined }) {
   return (
     <View style={{ flexDirection: "row", gap: 2 }}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <Feather
+        <FontAwesome
           key={i}
-          name={i <= stars ? "star" : "star"}
+          name={i <= stars ? "star" : "star-o"}
           size={12}
           color={i <= stars ? colors.accent : colors.border}
         />
@@ -231,12 +231,6 @@ export default function QuestionDetailScreen() {
           {question.description}
         </Text>
         <View style={styles.qMeta}>
-          <View style={styles.metaItem}>
-            <Feather name="clock" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
-              {question.preferredDuration} min
-            </Text>
-          </View>
           {question.optionalBudget != null && (
             <View style={styles.metaItem}>
               <Feather

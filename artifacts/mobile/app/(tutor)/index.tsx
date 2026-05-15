@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { Link, router } from "expo-router";
 import {
   View,
   Text,
@@ -15,8 +16,8 @@ import {
   ScrollView,
   RefreshControl,
   Pressable,
+  Alert,
 } from "react-native";
-import { Link, router } from "expo-router";
 
 export default function TutorDashboardScreen() {
   const { user } = useAuth();
@@ -69,7 +70,16 @@ export default function TutorDashboardScreen() {
 
       <View style={styles.statsGrid}>
         <Pressable
-          onPress={() => router.push("/tutor/browse")}
+          onPress={() => {
+            if (dashboard?.openBids && dashboard.openBids > 0) {
+              router.push("/tutor/browse");
+            } else {
+              Alert.alert(
+                "No Open Bids",
+                "You don't have any open bids to review.",
+              );
+            }
+          }}
           style={styles.statCard}
         >
           <Card style={styles.statCardInner}>
