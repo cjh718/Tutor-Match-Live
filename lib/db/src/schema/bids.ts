@@ -14,7 +14,7 @@ export const bidsTable = pgTable("bids", {
     .references(() => usersTable.userId),
   price: real("price").notNull(),
   message: text("message").notNull(),
-  status: text("status", { enum: ["Pending", "Accepted", "Rejected"] })
+  status: text("status", { enum: ["Pending", "Accepted", "Rejected", "Withdrawn"] })
     .notNull()
     .default("Pending"),
   createdDate: timestamp("created_date", { withTimezone: true }).notNull().defaultNow(),

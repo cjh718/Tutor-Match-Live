@@ -47,11 +47,32 @@ export default function TutorTabLayout() {
           tabBarIcon: ({ color, size }) => <Feather name="search" size={size} color={color} />,
         }}
       />
+      {/* HIDE my-bids tab */}
+      <Tabs.Screen
+        name="my-bids"
+        options={{
+          href: null,
+        }}
+      />
+      {/* HIDE accepted-bids tab */}
+      <Tabs.Screen
+        name="accepted-bids"
+        options={{
+          href: null,
+        }}
+      />
+      {/* HIDE sessions tab */}
       <Tabs.Screen
         name="sessions"
         options={{
-          title: "Sessions",
-          tabBarIcon: ({ color, size }) => <Feather name="calendar" size={size} color={color} />,
+          href: null,
+        }}
+      />
+      {/* HIDE completed tab */}
+      <Tabs.Screen
+        name="completed"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen

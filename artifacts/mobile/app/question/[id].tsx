@@ -33,11 +33,12 @@ import { useState } from "react";
 
 function statusVariant(status: string) {
   if (status === "Open") return "blue";
-  if (status === "BidReceived") return "info";
+  if (status === "BidReceived") return "blue";
   if (status === "Matched") return "warning";
   if (status === "PendingConfirmation") return "warning";
-  if (status === "Confirmed") return "success";
+  if (status === "Scheduled" || status === "Confirmed") return "success";
   if (status === "Completed") return "outline";
+  if (status === "Withdrawn") return "destructive";
   return "destructive";
 }
 
@@ -61,7 +62,7 @@ function StarRating({ rating }: { rating: number | null | undefined }) {
 export default function QuestionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const questionId = parseInt(id, 10);
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -141,6 +142,34 @@ export default function QuestionDetailScreen() {
     );
   };
 
+  const handleWithdrawBid = async (bidId: number) => {
+    Alert.alert(
+      "Withdraw Bid",
+      "Are you sure you want to withdraw your bid? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Withdraw",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await updateBid.mutateAsync({
+                bidId,
+                data: { status: "Withdrawn" as any },
+              });
+              await queryClient.invalidateQueries({
+                queryKey: getGetBidsQueryKey({ questionId }),
+              });
+              Alert.alert("Success", "Your bid has been withdrawn");
+            } catch {
+              Alert.alert("Error", "Failed to withdraw bid");
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleSubmitBid = async () => {
     const e: Record<string, string> = {};
     const price = parseFloat(bidPrice);
@@ -153,52 +182,23 @@ export default function QuestionDetailScreen() {
     }
 
     try {
-      console.log("=== SUBMITTING BID ===");
-      console.log("Question ID:", questionId);
-      console.log("Price:", price);
-      console.log("Message:", bidMessage.trim());
-
-      // Direct fetch - THIS WILL WORK
-      const response = await fetch("/api/bids", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          questionId: questionId,
-          price: price,
+      await createBid.mutateAsync({
+        data: {
+          questionId,
+          price,
           message: bidMessage.trim(),
-          estimatedDuration: 60, // ← ADD THIS (default 60 minutes)
-        }),
+        } as any,
       });
 
-      console.log("Response status:", response.status);
+      await queryClient.invalidateQueries({
+        queryKey: getGetBidsQueryKey({ questionId }),
+      });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Bid submitted successfully:", data);
-
-        // Invalidate queries to refresh data
-        await queryClient.invalidateQueries({
-          queryKey: getGetBidsQueryKey({ questionId }),
-        });
-
-        setShowBidForm(false);
-        setBidPrice("");
-        setBidMessage("");
-      } else {
-        const errorText = await response.text();
-        console.log("Error response:", errorText);
-        Alert.alert("Error", `Failed to submit bid: ${response.status}`);
-      }
-    } catch (error: any) {
-      console.log("=== BID SUBMISSION ERROR ===");
-      console.log("Error:", error);
-      Alert.alert(
-        "Error",
-        `Failed to submit bid: ${error?.message || "Unknown error"}`,
-      );
+      setShowBidForm(false);
+      setBidPrice("");
+      setBidMessage("");
+    } catch {
+      Alert.alert("Error", "Failed to submit bid. Please try again.");
     }
   };
 
@@ -245,7 +245,9 @@ export default function QuestionDetailScreen() {
       <Card style={styles.questionCard}>
         <View style={styles.qHeader}>
           <Badge
-            label={question.status}
+            label={
+              (question.status as any) === "BidReceived" ? "Has Bids" : (question.status as any) === "Confirmed" ? "Scheduled" : question.status
+            }
             variant={statusVariant(question.status)}
           />
           <Text style={[styles.subject, { color: colors.mutedForeground }]}>
@@ -288,11 +290,43 @@ export default function QuestionDetailScreen() {
         </View>
       </Card>
 
+      {/* Student: Propose Time button when waiting for confirmation */}
+      {isStudent && question.status === "Matched" && (
+        <Card
+          style={[
+            styles.warningCard,
+            { backgroundColor: colors.warning + "20", marginBottom: 16 },
+          ]}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+            <Feather name="clock" size={20} color={colors.warning} />
+            <Text style={{ color: colors.foreground, flex: 1, marginLeft: 12 }}>
+              You accepted a bid! Propose a session time to continue.
+            </Text>
+          </View>
+          <Button
+            title="Propose Time"
+            variant="primary"
+            size="sm"
+            onPress={() => {
+              const acceptedBid = bids?.find((b) => b.status === "Accepted");
+              if (acceptedBid) {
+                router.push(
+                  `/propose-time?questionId=${questionId}&tutorId=${acceptedBid.tutorId}`,
+                );
+              } else {
+                Alert.alert("Error", "No accepted bid found");
+              }
+            }}
+            style={{ marginTop: 12 }}
+          />
+        </Card>
+      )}
+
       {/* Student: edit button when Open and owner */}
       {isOwner &&
-        (question.status === "Open" ||
-          question.status === "BidReceived" ||
-          question.status === "Matched") && (
+        ((question.status as any) === "Open" ||
+          (question.status as any) === "BidReceived") && (
           <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
             <Button
               title="Edit Question"
@@ -317,40 +351,14 @@ export default function QuestionDetailScreen() {
                       style: "destructive",
                       onPress: async () => {
                         try {
-                          console.log("=== DELETE DEBUG ===");
-                          console.log("Question ID:", questionId);
-                          console.log("Question Status:", question?.status);
-                          console.log("Is Owner:", isOwner);
-                          console.log("User ID:", user?.userId);
-
-                          const url = `/api/questions/${questionId}`;
-                          console.log("Request URL:", url);
-
-                          const response = await fetch(url, {
+                          const mod: any = await import("@workspace/api-client-react");
+                          await mod.customFetch(`/api/questions/${questionId}`, {
                             method: "DELETE",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${token}`,
-                            },
+                            headers: { "Content-Type": "application/json" },
                           });
-
-                          console.log("Response status:", response.status);
-                          const responseText = await response.text();
-                          console.log("Response body:", responseText);
-
-                          if (response.ok) {
-                            console.log("Delete successful, going back");
-                            router.back();
-                          } else {
-                            console.log("Delete failed");
-                            Alert.alert(
-                              "Error",
-                              `Failed to delete: ${response.status}`,
-                            );
-                          }
-                        } catch (error) {
-                          console.log("Network error:", error);
-                          Alert.alert("Error", "Network error occurred");
+                          router.back();
+                        } catch (error: any) {
+                          Alert.alert("Error", error?.message || "Failed to delete question");
                         }
                       },
                     },
@@ -364,104 +372,134 @@ export default function QuestionDetailScreen() {
         )}
 
       {/* Tutor: bid form or existing bid */}
-      {isTutor && question.status === "Open" && (
-        <View style={{ marginBottom: 8 }}>
-          {myBid ? (
-            <Card style={styles.myBidCard}>
-              <View style={styles.myBidHeader}>
-                <Feather name="check-circle" size={16} color={colors.success} />
-                <Text style={[styles.myBidTitle, { color: colors.success }]}>
-                  Your bid submitted
+      {isTutor &&
+        ((question.status as any) === "Open" ||
+          (question.status as any) === "BidReceived" ||
+          (question.status as any) === "Matched" ||
+          (question.status as any) === "PendingConfirmation") && (
+          <View style={{ marginBottom: 8 }}>
+            {/* DEBUG: Check if myBid exists */}
+            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>
+              Debug: myBid = {myBid ? `Exists (${myBid.status})` : "undefined"}{" "}
+              | Question status: {question.status}
+            </Text>
+
+            {myBid ? (
+              <Card style={styles.myBidCard}>
+                <View style={styles.myBidHeader}>
+                  <Feather
+                    name="check-circle"
+                    size={16}
+                    color={colors.success}
+                  />
+                  <Text style={[styles.myBidTitle, { color: colors.success }]}>
+                    Your bid submitted
+                  </Text>
+                  <Badge
+                    label={myBid.status}
+                    variant={
+                      myBid.status === "Accepted"
+                        ? "success"
+                        : myBid.status === "Rejected"
+                          ? "destructive"
+                          : (myBid.status as any) === "Withdrawn"
+                            ? "destructive"
+                            : "default"
+                    }
+                  />
+                </View>
+                <Text style={[styles.myBidPrice, { color: colors.foreground }]}>
+                  SGD {myBid.price.toFixed(2)}
                 </Text>
-                <Badge
-                  label={myBid.status}
-                  variant={
-                    myBid.status === "Accepted"
-                      ? "success"
-                      : myBid.status === "Rejected"
-                        ? "destructive"
-                        : "default"
-                  }
-                />
-              </View>
-              <Text style={[styles.myBidPrice, { color: colors.foreground }]}>
-                SGD {myBid.price.toFixed(2)}
-              </Text>
-              <Text
-                style={[styles.myBidMessage, { color: colors.mutedForeground }]}
-              >
-                {myBid.message}
-              </Text>
-            </Card>
-          ) : showBidForm ? (
-            <Card style={styles.bidFormCard}>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: colors.foreground, marginBottom: 16 },
-                ]}
-              >
-                Submit a Bid
-              </Text>
+                <Text
+                  style={[
+                    styles.myBidMessage,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  {myBid.message}
+                </Text>
 
-              <Input
-                label="Your Price (SGD)"
-                placeholder="Input your best bid"
-                value={bidPrice}
-                onChangeText={(t) => {
-                  setBidPrice(t);
-                  setBidErrors((e) => ({ ...e, price: "" }));
-                }}
-                keyboardType="decimal-pad"
-                error={bidErrors.price}
-              />
+                {/* Withdraw Button - only show if bid is still Pending */}
+                {myBid.status === "Pending" && (
+                  <Button
+                    title="Withdraw Bid"
+                    variant="outline"
+                    size="sm"
+                    onPress={() => handleWithdrawBid(myBid.bidId)}
+                    style={{ marginTop: 12 }}
+                  />
+                )}
+              </Card>
+            ) : showBidForm ? (
+              <Card style={styles.bidFormCard}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: colors.foreground, marginBottom: 16 },
+                  ]}
+                >
+                  Submit a Bid
+                </Text>
 
-              <Input
-                label="Message to Student"
-                placeholder="Why are you the right tutor for this?"
-                value={bidMessage}
-                onChangeText={(t) => {
-                  setBidMessage(t);
-                  setBidErrors((e) => ({ ...e, message: "" }));
-                }}
-                multiline
-                numberOfLines={3}
-                style={{ height: 80, paddingTop: 10 }}
-                error={bidErrors.message}
+                <Input
+                  label="Your Price (SGD)"
+                  placeholder="Input your best bid"
+                  value={bidPrice}
+                  onChangeText={(t) => {
+                    setBidPrice(t);
+                    setBidErrors((e) => ({ ...e, price: "" }));
+                  }}
+                  keyboardType="decimal-pad"
+                  error={bidErrors.price}
+                />
+
+                <Input
+                  label="Message to Student"
+                  placeholder="Why are you the right tutor for this?"
+                  value={bidMessage}
+                  onChangeText={(t) => {
+                    setBidMessage(t);
+                    setBidErrors((e) => ({ ...e, message: "" }));
+                  }}
+                  multiline
+                  numberOfLines={3}
+                  style={{ height: 80, paddingTop: 10 }}
+                  error={bidErrors.message}
+                />
+                <View style={styles.formActions}>
+                  <Button
+                    title="Cancel"
+                    variant="outline"
+                    onPress={() => setShowBidForm(false)}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title="Submit Bid"
+                    variant="primary"
+                    onPress={handleSubmitBid}
+                    loading={createBid.isPending}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </Card>
+            ) : (
+              <Button
+                title="Submit a Bid"
+                variant="primary"
+                onPress={() => setShowBidForm(true)}
+                style={styles.bidBtn}
+                icon={
+                  <Feather
+                    name="edit"
+                    size={16}
+                    color={colors.primaryForeground}
+                  />
+                }
               />
-              <View style={styles.formActions}>
-                <Button
-                  title="Cancel"
-                  variant="outline"
-                  onPress={() => setShowBidForm(false)}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  title="Submit Bid"
-                  variant="primary"
-                  onPress={handleSubmitBid}
-                  loading={createBid.isPending}
-                  style={{ flex: 1 }}
-                />
-              </View>
-            </Card>
-          ) : (
-            <Button
-              title="Submit a Bid"
-              variant="primary"
-              onPress={() => setShowBidForm(true)}
-              style={styles.bidBtn}
-              icon={
-                <Feather
-                  name="edit"
-                  size={16}
-                  color={colors.primaryForeground}
-                />
-              }
-            />
-          )}
-        </View>
-      )}
+            )}
+          </View>
+        )}
 
       {/* Student: list of bids */}
       {isStudent && (
@@ -507,7 +545,9 @@ export default function QuestionDetailScreen() {
                           ? "success"
                           : bid.status === "Rejected"
                             ? "destructive"
-                            : "default"
+                            : (bid.status as any) === "Withdrawn"
+                              ? "destructive"
+                              : "default"
                       }
                     />
                   </View>
@@ -547,7 +587,7 @@ export default function QuestionDetailScreen() {
                 >
                   {bid.message}
                 </Text>
-                {question.status === "Open" && bid.status === "Pending" && (
+                {question.status !== "Matched" && bid.status === "Pending" && (
                   <Button
                     title="Accept this bid"
                     variant="primary"
@@ -612,4 +652,8 @@ const styles = StyleSheet.create({
   },
   bidMetaText: { fontSize: 12 },
   bidMessage: { fontSize: 14, lineHeight: 20 },
+  warningCard: {
+    padding: 16,
+    borderRadius: 12,
+  },
 });

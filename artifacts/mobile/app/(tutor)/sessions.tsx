@@ -1,5 +1,5 @@
 import { FlatList, Pressable, StyleSheet, Text, View, RefreshControl } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGetSessions, getGetSessionsQueryKey } from '@workspace/api-client-react';
@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback } from 'react';
 
 function statusVariant(status: string) {
-  if (status === 'Confirmed') return 'success';
+  if (status === 'Scheduled') return 'success';
   if (status === 'Pending Confirmation') return 'warning';
   if (status === 'Completed') return 'outline';
   return 'destructive';
@@ -27,12 +28,33 @@ export default function TutorSessionsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
 
-  const { data: sessions, isLoading, refetch, isRefetching } = useGetSessions(
-    { tutorId: user?.userId },
-    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey({ tutorId: user?.userId }) } }
+  const { status, filter } = useLocalSearchParams<{ status?: string; filter?: string }>();
+
+  // For "upcoming" filter, fetch all tutor sessions and filter client-side
+  // since API only supports exact status match
+  const isUpcomingView = filter === 'upcoming';
+
+  const queryParams = status && !isUpcomingView
+    ? { tutorId: user?.userId, status: status as any }
+    : { tutorId: user?.userId };
+
+  const { data: allSessions, isLoading, refetch, isRefetching } = useGetSessions(
+    queryParams,
+    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey(queryParams) } }
   );
 
-  const sorted = [...(sessions ?? [])].sort((a, b) => {
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
+
+  // Apply client-side filtering for "upcoming" view (Pending Confirmation + Scheduled)
+  const filtered = isUpcomingView
+    ? (allSessions ?? []).filter(s => s.status === 'Pending Confirmation' || (s.status as any) === 'Scheduled')
+    : (allSessions ?? []);
+
+  const sorted = [...filtered].sort((a, b) => {
     const ta = a.finalTime ?? a.proposedTime;
     const tb = b.finalTime ?? b.proposedTime;
     if (!ta && !tb) return 0;
@@ -40,6 +62,20 @@ export default function TutorSessionsScreen() {
     if (!tb) return -1;
     return new Date(tb).getTime() - new Date(ta).getTime();
   });
+
+  const getTitle = () => {
+    if (isUpcomingView) return 'Upcoming Sessions';
+    if (status === 'Pending Confirmation') return 'Pending Confirmation';
+    if (status === 'Scheduled') return 'Upcoming Sessions';
+    return 'My Sessions';
+  };
+
+  const getEmptyDescription = () => {
+    if (isUpcomingView) return 'No upcoming sessions scheduled.';
+    if (status === 'Pending Confirmation') return 'No sessions waiting for your confirmation.';
+    if (status === 'Scheduled') return 'No upcoming sessions scheduled.';
+    return 'No sessions found.';
+  };
 
   if (isLoading) {
     return (
@@ -58,7 +94,7 @@ export default function TutorSessionsScreen() {
         scrollEnabled={sorted.length > 0}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
-          <EmptyState icon="calendar" title="No sessions yet" description="Accept bids and schedule sessions with students." />
+          <EmptyState icon="calendar" title={getTitle()} description={getEmptyDescription()} />
         }
         renderItem={({ item: s }) => (
           <Pressable onPress={() => router.push(`/session/${s.sessionId}`)}>

@@ -165,8 +165,8 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
   }
 
   const { status } = req.body as { status?: string };
-  if (!status) {
-    res.status(400).json({ error: "Status is required" });
+  if (!status || !["Pending", "Accepted", "Rejected", "Withdrawn"].includes(status)) {
+    res.status(400).json({ error: "Invalid status" });
     return;
   }
 

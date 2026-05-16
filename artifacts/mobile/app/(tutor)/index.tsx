@@ -16,7 +16,8 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
+import { Link, router, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 
 export default function TutorDashboardScreen() {
   const { user } = useAuth();
@@ -34,6 +35,13 @@ export default function TutorDashboardScreen() {
       queryKey: getGetTutorDashboardQueryKey(user?.userId || 0),
     },
   });
+
+  // Auto-refresh when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   if (isLoading) {
     return (
@@ -73,7 +81,7 @@ export default function TutorDashboardScreen() {
         <View style={styles.row}>
           {/* Open Bids Card */}
           <Pressable
-            onPress={() => router.push("/(tutor)/browse")}
+            onPress={() => router.push("/(tutor)/my-bids")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
@@ -87,13 +95,13 @@ export default function TutorDashboardScreen() {
             </Card>
           </Pressable>
 
-          {/* Accepted Bids (Pending Confirmation) Card */}
+          {/* Accepted Bids Card */}
           <Pressable
-            onPress={() => router.push("/(tutor)/sessions?status=pending")}
+            onPress={() => router.push("/(tutor)/accepted-bids")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
-              <Feather name="clock" size={24} color={colors.warning || "#f59e0b"} />
+              <Feather name="check" size={24} color={colors.warning} />
               <Text style={[styles.statValue, { color: colors.foreground }]}>
                 {dashboard?.acceptedBids || 0}
               </Text>
@@ -108,7 +116,7 @@ export default function TutorDashboardScreen() {
         <View style={styles.row}>
           {/* Upcoming Sessions Card */}
           <Pressable
-            onPress={() => router.push("/(tutor)/sessions")}
+            onPress={() => router.push("/(tutor)/sessions?filter=upcoming")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
@@ -123,7 +131,10 @@ export default function TutorDashboardScreen() {
           </Pressable>
 
           {/* Total Completed Card */}
-          <View style={styles.halfCard}>
+          <Pressable
+            onPress={() => router.push("/(tutor)/completed")}
+            style={styles.halfCard}
+          >
             <Card style={styles.statCard}>
               <Feather name="check-circle" size={24} color={colors.success} />
               <Text style={[styles.statValue, { color: colors.foreground }]}>
@@ -133,7 +144,7 @@ export default function TutorDashboardScreen() {
                 Completed
               </Text>
             </Card>
-          </View>
+          </Pressable>
         </View>
       </View>
 

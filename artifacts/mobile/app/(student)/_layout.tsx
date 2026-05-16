@@ -40,18 +40,25 @@ export default function StudentTabLayout() {
           tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
         }}
       />
+      {/* HIDE questions tab */}
       <Tabs.Screen
         name="questions"
         options={{
-          title: "Questions",
-          tabBarIcon: ({ color, size }) => <Feather name="list" size={size} color={color} />,
+          href: null,
         }}
       />
+      {/* HIDE sessions tab */}
       <Tabs.Screen
         name="sessions"
         options={{
-          title: "Sessions",
-          tabBarIcon: ({ color, size }) => <Feather name="calendar" size={size} color={color} />,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="completed"
+        options={{
+          title: "Completed",
+          tabBarIcon: ({ color, size }) => <Feather name="check-circle" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

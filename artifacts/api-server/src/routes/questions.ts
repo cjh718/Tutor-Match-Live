@@ -278,9 +278,8 @@ router.delete(
 
     // Only prevent deletion for certain statuses
     if (
-      existing.status === "Matched" ||
       existing.status === "PendingConfirmation" ||
-      existing.status === "Confirmed" ||
+      existing.status === "Scheduled" ||
       existing.status === "Completed"
     ) {
       res.status(400).json({

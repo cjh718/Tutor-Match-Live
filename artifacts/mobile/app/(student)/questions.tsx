@@ -1,31 +1,24 @@
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  RefreshControl,
-} from "react-native";
-import { router } from "expo-router";
-import { Feather } from "@expo/vector-icons";
-import { useAuth } from "@/contexts/AuthContext";
-import {
-  useGetQuestions,
-  getGetQuestionsQueryKey,
-} from "@workspace/api-client-react";
-import { useColors } from "@/hooks/useColors";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FlatList, Pressable, StyleSheet, Text, View, RefreshControl } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { useAuth } from '@/contexts/AuthContext';
+import { useGetQuestions, getGetQuestionsQueryKey } from '@workspace/api-client-react';
+import { useColors } from '@/hooks/useColors';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback } from 'react';
 
 function statusVariant(status: string) {
-  if (status === "Open") return "blue";
-  if (status === "Matched") return "warning";
-  if (status === "Scheduled") return "success";
-  if (status === "Completed") return "outline";
-  return "destructive";
+  if (status === 'Open') return 'outline';
+  if (status === 'BidReceived') return 'warning';
+  if (status === 'Matched') return 'success';
+  if (status === 'PendingConfirmation') return 'warning';
+  if (status === 'Scheduled') return 'success';
+  if (status === 'Completed') return 'outline';
+  return 'destructive';
 }
 
 export default function StudentQuestionsScreen() {
@@ -33,37 +26,55 @@ export default function StudentQuestionsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
 
-  const {
-    data: questions,
-    isLoading,
-    refetch,
-    isRefetching,
-  } = useGetQuestions(
-    { studentId: user?.userId },
-    {
-      query: {
-        enabled: !!user?.userId,
-        queryKey: getGetQuestionsQueryKey({ studentId: user?.userId }),
-      },
-    },
+  const { status, filter } = useLocalSearchParams<{ status?: string; filter?: string }>();
+
+  // For "bids received" view, fetch all questions and filter client-side
+  // since API only supports exact status match
+  const isBidsReceivedView = filter === 'bids-received';
+
+  // Type assertion needed because generated types don't include all statuses
+  const queryParams = status && !isBidsReceivedView
+    ? { studentId: user?.userId, status: status as any }
+    : { studentId: user?.userId };
+
+  const { data: allQuestions, isLoading, refetch, isRefetching } = useGetQuestions(
+    queryParams,
+    { query: { enabled: !!user?.userId, queryKey: getGetQuestionsQueryKey(queryParams) } }
   );
 
-  const sorted = [...(questions ?? [])].sort(
-    (a, b) =>
-      new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime(),
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
   );
+
+  // Apply client-side filtering for "bids received" view
+  const filtered = isBidsReceivedView
+    ? (allQuestions ?? []).filter(q => (q.status as any) === 'BidReceived' || q.status === 'Matched')
+    : (allQuestions ?? []);
+
+  const sorted = [...filtered].sort((a, b) =>
+    new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
+  );
+
+  const getTitle = () => {
+    if (status === 'Open') return 'Open Questions';
+    if (isBidsReceivedView) return 'Bids Received';
+    if (status === 'BidReceived') return 'Bids Received';
+    return 'My Questions';
+  };
+
+  const getEmptyDescription = () => {
+    if (status === 'Open') return 'No open questions. Post a new question to get help.';
+    if (isBidsReceivedView) return 'No bids received yet. Tutors will bid soon!';
+    if (status === 'BidReceived') return 'No bids received yet. Tutors will bid soon!';
+    return 'No questions posted yet.';
+  };
 
   if (isLoading) {
     return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: colors.background, padding: 20 },
-        ]}
-      >
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} height={88} style={{ marginBottom: 12 }} />
-        ))}
+      <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
+        {[1, 2, 3].map(i => <Skeleton key={i} height={100} style={{ marginBottom: 12 }} />)}
       </View>
     );
   }
@@ -72,100 +83,36 @@ export default function StudentQuestionsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={sorted}
-        keyExtractor={(q) => String(q.questionId)}
-        contentContainerStyle={[
-          styles.list,
-          { paddingTop: 16, paddingBottom: insets.bottom + 100 },
-        ]}
+        keyExtractor={q => String(q.questionId)}
+        contentContainerStyle={[styles.list, { paddingTop: 16, paddingBottom: insets.bottom + 100 }]}
         scrollEnabled={sorted.length > 0}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            tintColor={colors.primary}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
-          <EmptyState
-            icon="inbox"
-            title="No questions yet"
-            description="Post your first question to get matched with a tutor."
-          />
+          <EmptyState icon="help-circle" title={getTitle()} description={getEmptyDescription()} />
         }
         renderItem={({ item: q }) => (
           <Pressable onPress={() => router.push(`/question/${q.questionId}`)}>
             <Card style={styles.card}>
               <View style={styles.cardHeader}>
-                <Text
-                  style={[styles.title, { color: colors.foreground }]}
-                  numberOfLines={1}
-                >
+                <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {q.title}
                 </Text>
-                <Badge 
-                  label={q.status === "BidReceived" ? "Bid Received" : q.status} 
-                  variant={statusVariant(q.status)} 
-                />
+                <Badge label={q.status} variant={statusVariant(q.status)} />
               </View>
-              <Text style={[styles.subject, { color: colors.mutedForeground }]}>
-                {q.subject}
-              </Text>
-              <View style={styles.meta}>
-                <View style={styles.metaItem}>
-                  <Feather
-                    name="tag"
-                    size={13}
-                    color={colors.mutedForeground}
-                  />
-                  <Text
-                    style={[styles.metaText, { color: colors.mutedForeground }]}
-                  >
-                    {q.bidCount} bid{q.bidCount !== 1 ? "s" : ""}
-                  </Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Feather
-                    name="clock"
-                    size={13}
-                    color={colors.mutedForeground}
-                  />
-                  <Text
-                    style={[styles.metaText, { color: colors.mutedForeground }]}
-                  >
-                    {q.preferredDuration} min
-                  </Text>
-                </View>
-                {q.optionalBudget != null && (
-                  <View style={styles.metaItem}>
-                    <Feather
-                      name="dollar-sign"
-                      size={13}
-                      color={colors.mutedForeground}
-                    />
-                    <Text
-                      style={[
-                        styles.metaText,
-                        { color: colors.mutedForeground },
-                      ]}
-                    >
-                      SGD {q.optionalBudget.toFixed(0)}
-                    </Text>
-                  </View>
-                )}
+              <View style={styles.metaRow}>
+                <Feather name="book" size={13} color={colors.mutedForeground} />
+                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{q.subject}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Feather name="message-circle" size={13} color={colors.mutedForeground} />
+                <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                  {q.bidCount ?? 0} bids
+                </Text>
               </View>
             </Card>
           </Pressable>
         )}
       />
-      <Pressable
-        style={[
-          styles.fab,
-          { backgroundColor: colors.primary, bottom: insets.bottom + 30 },
-        ]}
-        onPress={() => router.push("/post-question")}
-      >
-        <Feather name="plus" size={24} color={colors.primaryForeground} />
-      </Pressable>
     </View>
   );
 }
@@ -174,29 +121,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   list: { paddingHorizontal: 16 },
   card: { padding: 16, marginBottom: 12 },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 6,
-  },
-  title: { fontSize: 15, fontWeight: "600", flex: 1, marginRight: 8 },
-  subject: { fontSize: 13, marginBottom: 10 },
-  meta: { flexDirection: "row", gap: 14 },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  metaText: { fontSize: 12 },
-  fab: {
-    position: "absolute",
-    right: 20,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+  title: { fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  metaText: { fontSize: 13 },
 });

@@ -16,7 +16,8 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
+import { Link, router, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 
 export default function StudentDashboardScreen() {
   const { user } = useAuth();
@@ -34,6 +35,13 @@ export default function StudentDashboardScreen() {
       queryKey: getGetStudentDashboardQueryKey(user?.userId || 0),
     },
   });
+
+  // Auto-refresh when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   if (isLoading) {
     return (
@@ -73,7 +81,7 @@ export default function StudentDashboardScreen() {
         <View style={styles.row}>
           {/* Open Questions Card */}
           <Pressable
-            onPress={() => router.push("/(student)/questions")}
+            onPress={() => router.push("/(student)/questions?status=Open")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
@@ -89,9 +97,9 @@ export default function StudentDashboardScreen() {
             </Card>
           </Pressable>
 
-          {/* Pending Bids Card */}
+          {/* Bids Received Card */}
           <Pressable
-            onPress={() => router.push("/(student)/questions")}
+            onPress={() => router.push("/(student)/questions?filter=bids-received")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
@@ -102,7 +110,7 @@ export default function StudentDashboardScreen() {
               <Text
                 style={[styles.statLabel, { color: colors.mutedForeground }]}
               >
-                Pending Bids
+                Bids received
               </Text>
             </Card>
           </Pressable>
@@ -112,7 +120,7 @@ export default function StudentDashboardScreen() {
         <View style={styles.row}>
           {/* Upcoming Sessions Card */}
           <Pressable
-            onPress={() => router.push("/(student)/sessions")}
+            onPress={() => router.push("/(student)/sessions?filter=upcoming")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
@@ -120,37 +128,43 @@ export default function StudentDashboardScreen() {
               <Text style={[styles.statValue, { color: colors.foreground }]}>
                 {dashboard?.scheduledSessions || 0}
               </Text>
-              <Text
-                style={[styles.statLabel, { color: colors.mutedForeground }]}
-              >
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
                 Upcoming Sessions
               </Text>
             </Card>
           </Pressable>
 
-          {/* Pending Confirmation Card */}
+          {/* Pending Tutors Card */}
           <Pressable
-            onPress={() => router.push("/(student)/sessions?status=pending")}
+            onPress={() => router.push("/(student)/sessions?filter=pending")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
-              <Feather
-                name="loader"
-                size={24}
-                color={colors.warning || "#f59e0b"}
-              />
+              <Feather name="loader" size={24} color={colors.warning} />
               <Text style={[styles.statValue, { color: colors.foreground }]}>
                 {dashboard?.pendingConfirmation || 0}
               </Text>
-              <Text
-                style={[styles.statLabel, { color: colors.mutedForeground }]}
-              >
-                Pending Confirmation
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+                Pending Tutors
               </Text>
             </Card>
           </Pressable>
         </View>
       </View>
+
+      {/* FAB Button - Below the 4 boxes, above Recent Questions */}
+      <Pressable
+        style={[
+          styles.fab,
+          { backgroundColor: colors.primary },
+        ]}
+        onPress={() => router.push("/post-question")}
+      >
+        <Feather name="plus" size={24} color={colors.primaryForeground} />
+        <Text style={[styles.fabText, { color: colors.primaryForeground }]}>
+          Post New Question
+        </Text>
+      </Pressable>
 
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
         Recent Questions
@@ -199,7 +213,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   statsGrid: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   row: {
     flexDirection: "row",
@@ -224,6 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     marginBottom: 16,
+    marginTop: 8,
   },
   itemCard: {
     padding: 16,
@@ -233,5 +248,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 4,
+  },
+  fab: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 30,
+    marginBottom: 24,
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  fabText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

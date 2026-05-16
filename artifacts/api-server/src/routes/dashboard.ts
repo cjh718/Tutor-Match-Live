@@ -1,12 +1,13 @@
 import {
   db,
-  questionsTable,
   sessionsTable,
-  bidsTable,
-  reviewsTable,
   usersTable,
+  questionsTable,
+  bidsTable,
+  tutorProfilesTable,
+  reviewsTable,
 } from "@workspace/db";
-import { and, avg, count, eq, ne, sum } from "drizzle-orm";
+import { and, avg, count, eq, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { authMiddleware } from "../middlewares/auth";
 
@@ -27,6 +28,7 @@ router.get(
       return;
     }
 
+    // Open Questions = "Open"
     const [openCount] = await db
       .select({ value: count() })
       .from(questionsTable)
@@ -37,27 +39,32 @@ router.get(
         ),
       );
 
-    const [matchedCount] = await db
+    // Bids Received = "BidReceived"
+    const [bidReceivedCount] = await db
       .select({ value: count() })
       .from(questionsTable)
       .where(
         and(
           eq(questionsTable.studentId, studentId),
-          eq(questionsTable.status, "Matched"),
+          eq(questionsTable.status, "BidReceived"),
         ),
       );
 
-    const [scheduledCount] = await db
+    // Upcoming Sessions = "Matched" + "Scheduled"
+    const [upcomingCount] = await db
       .select({ value: count() })
-      .from(sessionsTable)
+      .from(questionsTable)
       .where(
         and(
-          eq(sessionsTable.studentId, studentId),
-          eq(sessionsTable.status, "Confirmed"),
-        ),
+          eq(questionsTable.studentId, studentId),
+          or(
+            eq(questionsTable.status, "Matched"),
+            eq(questionsTable.status, "Scheduled")
+          )
+        )
       );
 
-    // Pending Confirmation count
+    // Pending Tutors = "PendingConfirmation" (from sessions)
     const [pendingConfirmation] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -157,12 +164,11 @@ router.get(
 
     res.json({
       openQuestions: Number(openCount.value),
-      matchedQuestions: Number(matchedCount.value),
-      scheduledSessions: Number(scheduledCount.value),
-      pendingConfirmation: Number(pendingConfirmation.value),
+      pendingBids: Number(bidReceivedCount.value),  // Bids Received
+      scheduledSessions: Number(upcomingCount.value),  // Upcoming Sessions (Matched + Scheduled)
+      pendingConfirmation: Number(pendingConfirmation.value),  // Pending Tutors
       completedSessions: Number(completedCount.value),
       totalSpent: 0,
-      pendingBids: Number(pendingBids.value),
       recentQuestions: recentWithStudents,
       upcomingSessions: upcomingEnriched,
     });
@@ -179,38 +185,57 @@ router.get(
       return;
     }
 
-    const [openBids] = await db
+    // Open Bids = my Pending bids on Open questions
+    const [openBidsCount] = await db
       .select({ value: count() })
       .from(bidsTable)
+      .innerJoin(
+        questionsTable,
+        eq(bidsTable.questionId, questionsTable.questionId),
+      )
       .where(
-        and(eq(bidsTable.tutorId, tutorId), eq(bidsTable.status, "Pending")),
+        and(
+          eq(bidsTable.tutorId, tutorId),
+          eq(bidsTable.status, "Pending"),
+          eq(questionsTable.status, "Open"),
+        ),
       );
 
-    // Accepted Bids = bids that are accepted BUT session is NOT confirmed yet (Pending Confirmation)
-    const [acceptedBids] = await db
+    // Accepted Bids = my Accepted bids on questions that haven't been completed/cancelled
+    // This includes Matched (student hasn't proposed time) AND PendingConfirmation/Scheduled (student proposed, session in progress)
+    const [acceptedBidsCount] = await db
       .select({ value: count() })
       .from(bidsTable)
-      .innerJoin(sessionsTable, eq(bidsTable.bidId, sessionsTable.sessionId))
+      .innerJoin(
+        questionsTable,
+        eq(bidsTable.questionId, questionsTable.questionId),
+      )
       .where(
         and(
           eq(bidsTable.tutorId, tutorId),
           eq(bidsTable.status, "Accepted"),
-          eq(sessionsTable.status, "Pending Confirmation"),
+          or(
+            eq(questionsTable.status, "Matched"),
+          ),
         ),
       );
 
-    // Upcoming Sessions = sessions that are confirmed
-    const [scheduledSessions] = await db
+    // Upcoming Sessions = sessions with "Pending Confirmation" or "Scheduled"
+    const [upcomingCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
       .where(
         and(
           eq(sessionsTable.tutorId, tutorId),
-          eq(sessionsTable.status, "Confirmed"),
+          or(
+            eq(sessionsTable.status, "Pending Confirmation"),
+            eq(sessionsTable.status, "Scheduled"),
+          ),
         ),
       );
 
-    const [completedSessions] = await db
+    // Completed Sessions
+    const [completedCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
       .where(
@@ -220,35 +245,39 @@ router.get(
         ),
       );
 
-    // Pending Confirmation (sessions waiting for tutor response)
-    const [pendingConfirmation] = await db
-      .select({ value: count() })
+    // Total earned from completed sessions
+    const completedSessionsData = await db
+      .select()
       .from(sessionsTable)
       .where(
         and(
           eq(sessionsTable.tutorId, tutorId),
-          eq(sessionsTable.status, "Pending Confirmation"),
+          eq(sessionsTable.status, "Completed"),
         ),
       );
 
-    const [totalEarnedResult] = await db
-      .select({ value: sum(bidsTable.price) })
-      .from(bidsTable)
-      .innerJoin(sessionsTable, eq(bidsTable.bidId, sessionsTable.sessionId))
-      .where(
-        and(
-          eq(bidsTable.tutorId, tutorId),
-          eq(bidsTable.status, "Accepted"),
-          eq(sessionsTable.status, "Completed"), // ← Only count completed sessions
-        ),
-      );
+    let totalEarned = 0;
+    for (const session of completedSessionsData) {
+      const [bid] = await db
+        .select()
+        .from(bidsTable)
+        .where(
+          and(
+            eq(bidsTable.questionId, session.questionId),
+            eq(bidsTable.tutorId, tutorId),
+          ),
+        );
+      if (bid) totalEarned += bid.price;
+    }
 
-    const [avgRating] = await db
+    // Average rating
+    const [{ value: avgRating }] = await db
       .select({ value: avg(reviewsTable.rating) })
       .from(reviewsTable)
       .where(eq(reviewsTable.tutorId, tutorId));
 
-    const recentBids = await db
+    // Recent bids
+    const recentBidsData = await db
       .select()
       .from(bidsTable)
       .where(eq(bidsTable.tutorId, tutorId))
@@ -256,29 +285,32 @@ router.get(
       .limit(5);
 
     const recentBidsEnriched = await Promise.all(
-      recentBids.reverse().map(async (b) => {
-        const [tutor] = await db
+      recentBidsData.reverse().map(async (bid) => {
+        const [question] = await db
           .select()
-          .from(usersTable)
-          .where(eq(usersTable.userId, b.tutorId));
-        const { password: _, ...tutorWithoutPassword } = tutor;
-        return { ...b, tutor: tutorWithoutPassword, tutorProfile: null };
+          .from(questionsTable)
+          .where(eq(questionsTable.questionId, bid.questionId));
+        return { ...bid, question };
       }),
     );
 
-    const upcomingSessions = await db
+    // Upcoming sessions (Pending Confirmation or Scheduled)
+    const upcomingSessionsData = await db
       .select()
       .from(sessionsTable)
       .where(
         and(
           eq(sessionsTable.tutorId, tutorId),
-          eq(sessionsTable.status, "Confirmed"),
+          or(
+            eq(sessionsTable.status, "Pending Confirmation"),
+            eq(sessionsTable.status, "Scheduled"),
+          ),
         ),
       )
       .limit(5);
 
     const upcomingEnriched = await Promise.all(
-      upcomingSessions.map(async (s) => {
+      upcomingSessionsData.map(async (s) => {
         const [student] = await db
           .select()
           .from(usersTable)
@@ -302,48 +334,13 @@ router.get(
       }),
     );
 
-    // ========== DEBUG LOGGING - ADD THIS HERE ==========
-    console.log("=== TUTOR DASHBOARD DEBUG ===");
-    console.log("Tutor ID:", tutorId);
-    console.log("openBids:", Number(openBids.value));
-    console.log(
-      "acceptedBids (with Pending Confirmation):",
-      Number(acceptedBids.value),
-    );
-    console.log(
-      "scheduledSessions (Confirmed):",
-      Number(scheduledSessions.value),
-    );
-    console.log("completedSessions:", Number(completedSessions.value));
-
-    const allBids = await db
-      .select()
-      .from(bidsTable)
-      .where(eq(bidsTable.tutorId, tutorId));
-    console.log(
-      "All bids for tutor:",
-      allBids.map((b) => ({ id: b.bidId, status: b.status })),
-    );
-
-    const allSessions = await db
-      .select()
-      .from(sessionsTable)
-      .where(eq(sessionsTable.tutorId, tutorId));
-    console.log(
-      "All sessions for tutor:",
-      allSessions.map((s) => ({ id: s.sessionId, status: s.status })),
-    );
-    // ========== END DEBUG LOGGING ==========
-
     res.json({
-      openBids: Number(openBids.value),
-      acceptedBids: Number(acceptedBids.value),
-      scheduledSessions: Number(scheduledSessions.value),
-      completedSessions: Number(completedSessions.value),
-      totalEarned: totalEarnedResult.value
-        ? Number(totalEarnedResult.value)
-        : 0,
-      averageRating: avgRating.value ? parseFloat(avgRating.value) : 0,
+      openBids: Number(openBidsCount.value),
+      acceptedBids: Number(acceptedBidsCount.value),
+      scheduledSessions: Number(upcomingCount.value),
+      completedSessions: Number(completedCount.value),
+      totalEarned,
+      averageRating: avgRating ? parseFloat(parseFloat(avgRating).toFixed(2)) : 0,
       recentBids: recentBidsEnriched,
       upcomingSessions: upcomingEnriched,
     });

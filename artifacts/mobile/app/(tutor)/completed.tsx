@@ -1,5 +1,5 @@
 import { FlatList, Pressable, StyleSheet, Text, View, RefreshControl } from 'react-native';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGetSessions, getGetSessionsQueryKey } from '@workspace/api-client-react';
@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
 
 function statusVariant(status: string) {
-  if (status === 'Confirmed') return 'success';
+  if (status === 'Scheduled') return 'success';
   if (status === 'Pending Confirmation') return 'warning';
   if (status === 'Completed') return 'outline';
   return 'destructive';
@@ -23,27 +23,16 @@ function formatSGT(dateStr: string | null | undefined) {
   return new Date(dateStr).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', dateStyle: 'medium', timeStyle: 'short' });
 }
 
-export default function StudentSessionsScreen() {
+export default function TutorCompletedScreen() {
   const { user } = useAuth();
   const colors = useColors();
   const insets = useSafeAreaInsets();
 
-  const { filter } = useLocalSearchParams<{ filter?: string }>();
-
-  const getQueryParams = () => {
-    const baseParams: { studentId?: number; status?: any } = { studentId: user?.userId };
-    if (filter === 'pending') {
-      return { ...baseParams, status: 'Pending Confirmation' as any };
-    }
-    if (filter === 'upcoming') {
-      return { ...baseParams, status: 'Confirmed' as any };
-    }
-    return baseParams;
-  };
+  const queryParams = { tutorId: user?.userId, status: 'Completed' as const };
 
   const { data: sessions, isLoading, refetch, isRefetching } = useGetSessions(
-    getQueryParams(),
-    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey(getQueryParams()) } }
+    queryParams,
+    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey(queryParams) } }
   );
 
   useFocusEffect(
@@ -60,18 +49,6 @@ export default function StudentSessionsScreen() {
     if (!tb) return -1;
     return new Date(tb).getTime() - new Date(ta).getTime();
   });
-
-  const getTitle = () => {
-    if (filter === 'pending') return 'Pending Tutors';
-    if (filter === 'upcoming') return 'Upcoming Sessions';
-    return 'My Sessions';
-  };
-
-  const getEmptyDescription = () => {
-    if (filter === 'pending') return 'No sessions waiting for tutor confirmation.';
-    if (filter === 'upcoming') return 'No upcoming sessions scheduled.';
-    return 'Accept a tutor bid to schedule your first session.';
-  };
 
   if (isLoading) {
     return (
@@ -90,7 +67,7 @@ export default function StudentSessionsScreen() {
         scrollEnabled={sorted.length > 0}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
-          <EmptyState icon="calendar" title={getTitle()} description={getEmptyDescription()} />
+          <EmptyState icon="check-circle" title="No completed sessions" description="Completed tutoring sessions will appear here." />
         }
         renderItem={({ item: s }) => (
           <Pressable onPress={() => router.push(`/session/${s.sessionId}`)}>
@@ -104,7 +81,7 @@ export default function StudentSessionsScreen() {
               <View style={styles.metaRow}>
                 <Feather name="user" size={13} color={colors.mutedForeground} />
                 <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
-                  {s.tutor?.name ?? 'Tutor'}
+                  {s.student?.name ?? 'Student'}
                 </Text>
               </View>
               <View style={styles.metaRow}>
@@ -113,12 +90,6 @@ export default function StudentSessionsScreen() {
                   {formatSGT(s.finalTime ?? s.proposedTime)}
                 </Text>
               </View>
-              {s.meetingLink ? (
-                <View style={styles.metaRow}>
-                  <Feather name="video" size={13} color={colors.success} />
-                  <Text style={[styles.metaText, { color: colors.success }]}>Meeting link available</Text>
-                </View>
-              ) : null}
             </Card>
           </Pressable>
         )}
