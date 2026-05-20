@@ -12,8 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
 
 function statusVariant(status: string) {
-  if (status === 'Scheduled') return 'success';
-  if (status === 'Pending Confirmation') return 'warning';
+  if (status === 'Confirmed' || status === 'Scheduled') return 'success';
+  if (status === 'PendingConfirmation') return 'warning';
   if (status === 'Completed') return 'outline';
   return 'destructive';
 }
@@ -23,6 +23,23 @@ function formatSGT(dateStr: string | null | undefined) {
   return new Date(dateStr).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', dateStyle: 'medium', timeStyle: 'short' });
 }
 
+function getSessionStatusLabel(status: string) {
+  switch(status) {
+    case "PendingConfirmation":
+      return "Pending Confirmation";
+    case "Confirmed":
+      return "Confirmed";
+    case "Scheduled":
+      return "Scheduled";
+    case "Completed":
+      return "Completed";
+    case "Cancelled":
+      return "Cancelled";
+    default:
+      return status;
+  }
+}
+
 export default function TutorSessionsScreen() {
   const { user } = useAuth();
   const colors = useColors();
@@ -30,8 +47,6 @@ export default function TutorSessionsScreen() {
 
   const { status, filter } = useLocalSearchParams<{ status?: string; filter?: string }>();
 
-  // For "upcoming" filter, fetch all tutor sessions and filter client-side
-  // since API only supports exact status match
   const isUpcomingView = filter === 'upcoming';
 
   const queryParams = status && !isUpcomingView
@@ -49,9 +64,11 @@ export default function TutorSessionsScreen() {
     }, [refetch])
   );
 
-  // Apply client-side filtering for "upcoming" view (Pending Confirmation + Scheduled)
+  // Apply client-side filtering for "upcoming" view
   const filtered = isUpcomingView
-    ? (allSessions ?? []).filter(s => s.status === 'Pending Confirmation' || (s.status as any) === 'Scheduled')
+    ? (allSessions ?? []).filter(s => 
+        s.status === 'Confirmed'
+      )
     : (allSessions ?? []);
 
   const sorted = [...filtered].sort((a, b) => {
@@ -65,14 +82,14 @@ export default function TutorSessionsScreen() {
 
   const getTitle = () => {
     if (isUpcomingView) return 'Upcoming Sessions';
-    if (status === 'Pending Confirmation') return 'Pending Confirmation';
+    if (status === 'PendingConfirmation') return 'Pending Confirmation';
     if (status === 'Scheduled') return 'Upcoming Sessions';
     return 'My Sessions';
   };
 
   const getEmptyDescription = () => {
     if (isUpcomingView) return 'No upcoming sessions scheduled.';
-    if (status === 'Pending Confirmation') return 'No sessions waiting for your confirmation.';
+    if (status === 'PendingConfirmation') return 'No sessions waiting for your confirmation.';
     if (status === 'Scheduled') return 'No upcoming sessions scheduled.';
     return 'No sessions found.';
   };
@@ -103,7 +120,7 @@ export default function TutorSessionsScreen() {
                 <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {s.question?.title ?? 'Session'}
                 </Text>
-                <Badge label={s.status} variant={statusVariant(s.status)} />
+                <Badge label={getSessionStatusLabel(s.status)} variant={statusVariant(s.status)} />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="user" size={13} color={colors.mutedForeground} />
@@ -117,7 +134,7 @@ export default function TutorSessionsScreen() {
                   {formatSGT(s.finalTime ?? s.proposedTime)}
                 </Text>
               </View>
-              {s.status === 'Pending Confirmation' && (
+              {s.status === 'PendingConfirmation' && (
                 <View style={styles.metaRow}>
                   <Feather name="alert-circle" size={13} color={colors.accent} />
                   <Text style={[styles.metaText, { color: colors.accent }]}>Action required</Text>

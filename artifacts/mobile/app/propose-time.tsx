@@ -84,7 +84,7 @@ export default function ProposeTimeScreen() {
       Alert.alert(
         'Session proposed',
         'The tutor will confirm or counter-propose a time.',
-        [{ text: 'OK', onPress: () => router.replace(`/session/${session.sessionId}`) }]
+        [{ text: 'OK', onPress: () => router.push("/(student)/bids?filter=bids-received") }]
       );
     } catch {
       Alert.alert('Error', 'Failed to create session. Please try again.');

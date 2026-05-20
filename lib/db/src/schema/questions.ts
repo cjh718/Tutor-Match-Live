@@ -13,7 +13,7 @@ export const questionsTable = pgTable("questions", {
   preferredDuration: integer("preferred_duration").notNull(),
   optionalBudget: real("optional_budget"),
   status: text("status", {
-    enum: ["Open", "BidReceived", "Matched", "PendingConfirmation", "Scheduled", "Completed", "Cancelled"],
+    enum: ["Open", "BidReceived", "Matched", "PendingConfirmation", "PendingStudentConfirmation", "Scheduled", "Completed", "Cancelled"],
   })
     .notNull()
     .default("Open"),

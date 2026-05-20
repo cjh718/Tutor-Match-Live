@@ -99,13 +99,13 @@ export default function StudentDashboardScreen() {
 
           {/* Bids Received Card */}
           <Pressable
-            onPress={() => router.push("/(student)/questions?filter=bids-received")}
+            onPress={() => router.push("/(student)/bids?filter=bids-received")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
               <Feather name="clock" size={24} color={colors.accent} />
               <Text style={[styles.statValue, { color: colors.foreground }]}>
-                {dashboard?.pendingBids || 0}
+                {dashboard?.bidsReceived || 0}
               </Text>
               <Text
                 style={[styles.statLabel, { color: colors.mutedForeground }]}
@@ -126,7 +126,7 @@ export default function StudentDashboardScreen() {
             <Card style={styles.statCard}>
               <Feather name="calendar" size={24} color={colors.success} />
               <Text style={[styles.statValue, { color: colors.foreground }]}>
-                {dashboard?.scheduledSessions || 0}
+                {dashboard?.upcomingSessions || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
                 Upcoming Sessions
@@ -136,13 +136,13 @@ export default function StudentDashboardScreen() {
 
           {/* Pending Tutors Card */}
           <Pressable
-            onPress={() => router.push("/(student)/sessions?filter=pending")}
+            onPress={() => router.push("/(student)/pending?filter=pending")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>
               <Feather name="loader" size={24} color={colors.warning} />
               <Text style={[styles.statValue, { color: colors.foreground }]}>
-                {dashboard?.pendingConfirmation || 0}
+                {dashboard?.pendingTutors || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
                 Pending Tutors

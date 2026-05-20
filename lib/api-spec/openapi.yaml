@@ -441,7 +441,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [Pending Confirmation, Confirmed, Completed, Cancelled]
+            enum: [PendingConfirmation, Confirmed, Completed, Cancelled]
       responses:
         "200":
           description: List of sessions
@@ -976,7 +976,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: [Pending Confirmation, Confirmed, Completed, Cancelled]
+          enum: [PendingConfirmation, Confirmed, Completed, Cancelled]
         student:
           $ref: "#/components/schemas/User"
         tutor:
@@ -1013,7 +1013,7 @@ components:
           type: string
         status:
           type: string
-          enum: [Pending Confirmation, Confirmed, Completed, Cancelled]
+          enum: [PendingConfirmation, Confirmed, Completed, Cancelled]
 
     Review:
       type: object

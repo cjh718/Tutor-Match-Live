@@ -19,6 +19,9 @@ import {
   useUpdateBid,
   useCreateBid,
   useCreateSession,
+  useGetSessions,
+  getGetSessionsQueryKey,
+  customFetch,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { Card } from "@/components/ui/Card";
@@ -62,7 +65,7 @@ function StarRating({ rating }: { rating: number | null | undefined }) {
 export default function QuestionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const questionId = parseInt(id, 10);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -95,6 +98,16 @@ export default function QuestionDetailScreen() {
       },
     },
   );
+
+  // Fetch sessions for this question to get session ID
+  const {
+    data: sessions,
+    isLoading: sessionsLoading,
+  } = useGetSessions(
+    { questionId },
+    { query: { enabled: !!questionId } }
+  );
+  const session = sessions?.[0];
 
   const updateBid = useUpdateBid();
   const createBid = useCreateBid();
@@ -246,7 +259,7 @@ export default function QuestionDetailScreen() {
         <View style={styles.qHeader}>
           <Badge
             label={
-              (question.status as any) === "BidReceived" ? "Has Bids" : (question.status as any) === "Confirmed" ? "Scheduled" : question.status
+              (question.status as any) === "BidReceived" ? "Bidded" : (question.status as any) === "Confirmed" ? "Scheduled" : question.status
             }
             variant={statusVariant(question.status)}
           />
@@ -351,10 +364,8 @@ export default function QuestionDetailScreen() {
                       style: "destructive",
                       onPress: async () => {
                         try {
-                          const mod: any = await import("@workspace/api-client-react");
-                          await mod.customFetch(`/api/questions/${questionId}`, {
+                          await customFetch(`/api/questions/${questionId}`, {
                             method: "DELETE",
-                            headers: { "Content-Type": "application/json" },
                           });
                           router.back();
                         } catch (error: any) {
@@ -378,12 +389,6 @@ export default function QuestionDetailScreen() {
           (question.status as any) === "Matched" ||
           (question.status as any) === "PendingConfirmation") && (
           <View style={{ marginBottom: 8 }}>
-            {/* DEBUG: Check if myBid exists */}
-            <Text style={{ color: colors.mutedForeground, marginBottom: 8 }}>
-              Debug: myBid = {myBid ? `Exists (${myBid.status})` : "undefined"}{" "}
-              | Question status: {question.status}
-            </Text>
-
             {myBid ? (
               <Card style={styles.myBidCard}>
                 <View style={styles.myBidHeader}>
@@ -419,6 +424,16 @@ export default function QuestionDetailScreen() {
                 >
                   {myBid.message}
                 </Text>
+
+                {/* Confirm Time Button - for PendingConfirmation status */}
+                {myBid.status === "Accepted" && question.status === "PendingConfirmation" && session && (
+                  <Button
+                    title="Confirm Session Time"
+                    variant="primary"
+                    onPress={() => router.push(`/session/${session.sessionId}`)}
+                    style={{ marginTop: 12 }}
+                  />
+                )}
 
                 {/* Withdraw Button - only show if bid is still Pending */}
                 {myBid.status === "Pending" && (
@@ -553,17 +568,6 @@ export default function QuestionDetailScreen() {
                   </View>
                 </View>
                 <View style={styles.bidMeta}>
-                  <Feather
-                    name="clock"
-                    size={12}
-                    color={colors.mutedForeground}
-                  />
-                  <Text
-                    style={[
-                      styles.bidMetaText,
-                      { color: colors.mutedForeground },
-                    ]}
-                  ></Text>
                   {bid.tutorProfile?.hourlyRate != null && (
                     <>
                       <Feather

@@ -6,7 +6,6 @@ import {
   View,
   RefreshControl,
 } from "react-native";
-import { router, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -22,12 +21,36 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCallback } from "react";
+import { router, useFocusEffect, Stack } from "expo-router";
+
+function getStatusLabel(status: string) {
+  switch(status) {
+    case "Open":
+      return "Open";
+    case "BidReceived":
+      return "Bidded";
+    case "Matched":
+      return "Awaiting Schedule";
+    case "PendingConfirmation":
+      return "Pending Tutor Acceptance";
+    case "Scheduled":
+      return "Session Scheduled";
+    case "Completed":
+      return "Completed";
+    case "Cancelled":
+      return "Cancelled";
+    default:
+      return status;
+  }
+}
 
 export default function TutorMyBidsScreen() {
   const { user } = useAuth();
   const colors = useColors();
   const insets = useSafeAreaInsets();
 
+  <Stack.Screen options={{ title: "My Active Bids" }} />;
+  
   const {
     data: myBids,
     isLoading: bidsLoading,
@@ -142,7 +165,7 @@ export default function TutorMyBidsScreen() {
                 >
                   {item.question.title}
                 </Text>
-                <Badge label={item.question.status} variant="blue" />
+                <Badge label={getStatusLabel(item.question.status)} variant="blue" />
               </View>
               <Text
                 style={[styles.metaText, { color: colors.mutedForeground }]}

@@ -90,8 +90,9 @@ export default function TutorDashboardScreen() {
                 {dashboard?.openBids || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                Open Bids
+                Open Bids{'\n'}(Bids you've placed)
               </Text>
+              
             </Card>
           </Pressable>
 
@@ -106,7 +107,7 @@ export default function TutorDashboardScreen() {
                 {dashboard?.acceptedBids || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                Accepted Bids
+                Accepted Bids{'\n'}(Accepted by students)
               </Text>
             </Card>
           </Pressable>
@@ -122,10 +123,10 @@ export default function TutorDashboardScreen() {
             <Card style={styles.statCard}>
               <Feather name="calendar" size={24} color={colors.success} />
               <Text style={[styles.statValue, { color: colors.foreground }]}>
-                {dashboard?.scheduledSessions || 0}
+                {dashboard?.upcomingSessions || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                Upcoming Sessions
+                Upcoming Sessions{'\n'}(Scheduled Session)
               </Text>
             </Card>
           </Pressable>
@@ -141,7 +142,7 @@ export default function TutorDashboardScreen() {
                 {dashboard?.completedSessions || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                Completed
+                Completed{'\n'}(Finished sessions)
               </Text>
             </Card>
           </Pressable>
@@ -210,6 +211,7 @@ const styles = StyleSheet.create({
   statCard: {
     padding: 16,
     gap: 8,
+    minHeight: 130,
   },
   statValue: {
     fontSize: 24,

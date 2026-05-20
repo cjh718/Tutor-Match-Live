@@ -14,6 +14,8 @@ import {
   getGetBidsQueryKey,
   useGetQuestions,
   getGetQuestionsQueryKey,
+  useGetSessions,
+  getGetSessionsQueryKey,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { Card } from "@/components/ui/Card";
@@ -29,6 +31,27 @@ function statusVariant(status: string) {
   if (status === "Scheduled" || status === "Confirmed") return "success";
   if (status === "Completed") return "outline";
   return "destructive";
+}
+
+function getStatusLabel(status: string) {
+  switch(status) {
+    case "Open":
+      return "Open";
+    case "BidReceived":
+      return "Bidded";
+    case "Matched":
+      return "Awaiting Schedule";
+    case "PendingConfirmation":
+      return "Pending Tutor Acceptance";
+    case "Scheduled":
+      return "Session Scheduled";
+    case "Completed":
+      return "Completed";
+    case "Cancelled":
+      return "Cancelled";
+    default:
+      return status;
+  }
 }
 
 export default function TutorAcceptedBidsScreen() {
@@ -61,7 +84,16 @@ export default function TutorAcceptedBidsScreen() {
     { query: { queryKey: getGetQuestionsQueryKey({}) } },
   );
 
-  const isLoading = bidsLoading || questionsLoading;
+  // Fetch sessions to get sessionId for each bid
+  const {
+    data: allSessions,
+    isLoading: sessionsLoading,
+  } = useGetSessions(
+    { tutorId: user?.userId },
+    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey({ tutorId: user?.userId }) } },
+  );
+
+  const isLoading = bidsLoading || questionsLoading || sessionsLoading;
   const isRefetching = isRefetchingBids || isRefetchingQuestions;
 
   const refetch = () => {
@@ -82,16 +114,23 @@ export default function TutorAcceptedBidsScreen() {
     questionMap.set(q.questionId, q);
   });
 
+  // Build a map of questionId -> session
+  const sessionMap = new Map();
+  allSessions?.forEach((s) => {
+    sessionMap.set(s.questionId, s);
+  });
+
   // Join bids with their questions and filter by question status
-  const bidRows: { bid: NonNullable<typeof myBids>[number]; question: NonNullable<typeof allQuestions>[number] }[] = (myBids ?? [])
+  const bidRows: { bid: NonNullable<typeof myBids>[number]; question: NonNullable<typeof allQuestions>[number]; session: any }[] = (myBids ?? [])
     .map((bid) => {
       const question = questionMap.get(bid.questionId);
+      const session = sessionMap.get(bid.questionId);
       if (!question) return null;
-      return { bid, question };
+      return { bid, question, session };
     })
     .filter((item): item is NonNullable<typeof item> => 
       item !== null && 
-      (item.question.status === "Matched")
+      (item.question.status === "Matched" || item.question.status === "PendingConfirmation")
     );
 
   const sorted = [...bidRows].sort(
@@ -99,6 +138,21 @@ export default function TutorAcceptedBidsScreen() {
       new Date(b.bid.createdDate).getTime() -
       new Date(a.bid.createdDate).getTime(),
   );
+
+  const handlePress = (item: typeof bidRows[0]) => {
+    // If session exists, go to session page
+    if (item.session) {
+      router.push(`/session/${item.session.sessionId}`);
+    } 
+    // If question status is Matched (accepted, no session yet), go to question page to propose time
+    else if (item.question.status === "Matched") {
+      router.push(`/question/${item.question.questionId}`);
+    }
+    // Otherwise go to question page
+    else {
+      router.push(`/question/${item.question.questionId}`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -140,11 +194,7 @@ export default function TutorAcceptedBidsScreen() {
           />
         }
         renderItem={({ item }) => (
-          <Pressable
-            onPress={() =>
-              router.push(`/question/${item.question.questionId}`)
-            }
-          >
+          <Pressable onPress={() => handlePress(item)}>
             <Card style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text
@@ -153,10 +203,7 @@ export default function TutorAcceptedBidsScreen() {
                 >
                   {item.question.title}
                 </Text>
-                <Badge
-                  label={item.question.status}
-                  variant={statusVariant(item.question.status)}
-                />
+                <Badge label={getStatusLabel(item.question.status)} variant="warning" />
               </View>
               <Text
                 style={[styles.metaText, { color: colors.mutedForeground }]}
@@ -175,6 +222,16 @@ export default function TutorAcceptedBidsScreen() {
               >
                 {item.bid.message}
               </Text>
+              {!item.session && item.question.status === "Matched" && (
+                <View style={styles.actionBadge}>
+                  <Text style={styles.actionBadgeText}>Waiting for student to propose time</Text>
+                </View>
+              )}
+              {item.session && item.session.status === "PendingConfirmation" && (
+                <View style={styles.actionBadge}>
+                  <Text style={styles.actionBadgeText}>Click to confirm session time</Text>
+                </View>
+              )}
             </Card>
           </Pressable>
         )}
@@ -203,4 +260,17 @@ const styles = StyleSheet.create({
   },
   price: { fontSize: 14, fontWeight: "700" },
   message: { fontSize: 13, lineHeight: 18 },
+  actionBadge: {
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: "#fef3c7",
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  actionBadgeText: {
+    fontSize: 11,
+    color: "#d97706",
+    fontWeight: "500",
+  },
 });

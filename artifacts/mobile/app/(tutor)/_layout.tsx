@@ -1,8 +1,9 @@
 import { BlurView } from "expo-blur";
-import { Tabs } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { Platform, StyleSheet, useColorScheme } from "react-native";
 import { useColors } from "@/hooks/useColors";
+import { Stack, Tabs } from "expo-router";
+
 
 export default function TutorTabLayout() {
   const colors = useColors();
@@ -11,6 +12,7 @@ export default function TutorTabLayout() {
   const isIOS = Platform.OS === "ios";
 
   return (
+         
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
@@ -52,6 +54,8 @@ export default function TutorTabLayout() {
         name="my-bids"
         options={{
           href: null,
+          title: "My Active Bids",
+          headerShown: true,
         }}
       />
       {/* HIDE accepted-bids tab */}
@@ -59,6 +63,8 @@ export default function TutorTabLayout() {
         name="accepted-bids"
         options={{
           href: null,
+          title: "Accepted Bids",
+          headerShown: true,
         }}
       />
       {/* HIDE sessions tab */}
@@ -66,6 +72,8 @@ export default function TutorTabLayout() {
         name="sessions"
         options={{
           href: null,
+          title: "Scheduled Sessions",
+          headerShown: true,
         }}
       />
       {/* HIDE completed tab */}
@@ -73,6 +81,8 @@ export default function TutorTabLayout() {
         name="completed"
         options={{
           href: null,
+          title: "Completed",
+          headerShown: true,
         }}
       />
       <Tabs.Screen

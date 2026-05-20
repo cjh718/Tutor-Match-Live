@@ -30,7 +30,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(tutor)" options={{ headerShown: false }} />
       <Stack.Screen name="(admin)" options={{ headerShown: false }} />
       <Stack.Screen name="post-question" options={{ title: "Post a Question", headerShown: true }} />
-      <Stack.Screen name="question/[id]" options={{ title: "Question", headerShown: true }} />
+      <Stack.Screen name="question/[id]" options={{ title: "Bid Management", headerShown: true }} />
       <Stack.Screen name="propose-time" options={{ title: "Propose Time", headerShown: true }} />
       <Stack.Screen name="session/[id]" options={{ title: "Session", headerShown: true }} />
       <Stack.Screen name="notifications" options={{ title: "Notifications", headerShown: true }} />

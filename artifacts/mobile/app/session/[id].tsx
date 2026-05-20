@@ -1,4 +1,4 @@
-import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 function formatSGT(dateStr: string | null | undefined) {
   if (!dateStr) return 'TBD';
@@ -24,7 +25,7 @@ function formatSGT(dateStr: string | null | undefined) {
 
 function statusVariant(status: string) {
   if (status === 'Confirmed') return 'success';
-  if (status === 'Pending Confirmation') return 'warning';
+  if (status === 'PendingConfirmation') return 'warning';
   if (status === 'Completed') return 'outline';
   return 'destructive';
 }
@@ -54,25 +55,57 @@ export default function SessionDetailScreen() {
 
   const alreadyReviewed = reviews?.some(r => r.sessionId === sessionId && r.studentId === user?.userId);
 
-  // Counter time state (tutor)
-  const [counterDate, setCounterDate] = useState('');
-  const [counterTime, setCounterTime] = useState('');
+  // Counter time state (tutor) - using DateTimePicker
+  const [counterDateTime, setCounterDateTime] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(10, 0, 0, 0);
+    return d;
+  });
+  const [showCounterDatePicker, setShowCounterDatePicker] = useState(false);
+  const [showCounterTimePicker, setShowCounterTimePicker] = useState(false);
   const [showCounter, setShowCounter] = useState(false);
+
   // Meeting link state (tutor)
   const [meetingLink, setMeetingLink] = useState('');
   const [showLinkForm, setShowLinkForm] = useState(false);
+
   // Review state (student)
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [showReview, setShowReview] = useState(false);
 
-  const parseCounterDateTime = () => {
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    const timeRegex = /^\d{2}:\d{2}$/;
-    if (!dateRegex.test(counterDate) || !timeRegex.test(counterTime)) return null;
-    const d = new Date(`${counterDate}T${counterTime}:00+08:00`);
-    return isNaN(d.getTime()) ? null : d;
+  const onCounterDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowCounterDatePicker(false);
+    if (date) {
+      const merged = new Date(date);
+      merged.setHours(counterDateTime.getHours(), counterDateTime.getMinutes(), 0, 0);
+      setCounterDateTime(merged);
+    }
   };
+
+  const onCounterTimeChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowCounterTimePicker(false);
+    if (date) {
+      const merged = new Date(counterDateTime);
+      merged.setHours(date.getHours(), date.getMinutes(), 0, 0);
+      setCounterDateTime(merged);
+    }
+  };
+
+  const formattedCounterDate = counterDateTime.toLocaleDateString('en-SG', {
+    timeZone: 'Asia/Singapore',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+  const formattedCounterTime = counterDateTime.toLocaleTimeString('en-SG', {
+    timeZone: 'Asia/Singapore',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 
   const handleAcceptTime = async () => {
     try {
@@ -88,12 +121,23 @@ export default function SessionDetailScreen() {
   };
 
   const handleCounterTime = async () => {
-    const dt = parseCounterDateTime();
-    if (!dt) { Alert.alert('Invalid', 'Please enter a valid date (YYYY-MM-DD) and time (HH:MM).'); return; }
+    if (counterDateTime <= new Date()) {
+      Alert.alert('Invalid time', 'Please choose a future date and time.');
+      return;
+    }
     try {
-      await updateSession.mutateAsync({ sessionId, data: { tutorCounterTime: dt.toISOString() } });
+      await updateSession.mutateAsync({ 
+        sessionId, 
+        data: { tutorCounterTime: counterDateTime.toISOString() } 
+      });
+
       await queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey(sessionId) });
       setShowCounter(false);
+
+      // Navigate back to tutor dashboard after countering
+      Alert.alert('Success', 'Counter time proposed to student.', [
+        { text: 'OK', onPress: () => router.push('/(tutor)') }
+      ]);
     } catch {
       Alert.alert('Error', 'Failed to propose counter time.');
     }
@@ -117,6 +161,7 @@ export default function SessionDetailScreen() {
       await updateSession.mutateAsync({ sessionId, data: { meetingLink: meetingLink.trim() } });
       await queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey(sessionId) });
       setShowLinkForm(false);
+      setMeetingLink('');
     } catch {
       Alert.alert('Error', 'Failed to add meeting link.');
     }
@@ -169,14 +214,14 @@ export default function SessionDetailScreen() {
 
   if (!session) {
     return <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
-      <Text style={{ color: colors.foreground }}>Session not found.</Text>
+      <Text style={{ color: colors.foreground }}>No Session.</Text>
     </View>;
   }
 
   const displayTime = session.finalTime ?? session.tutorCounterTime ?? session.proposedTime;
-  const hasTutorCounter = !!session.tutorCounterTime && !session.finalTime && session.status === 'Pending Confirmation';
+  const hasTutorCounter = !!session.tutorCounterTime && !session.finalTime && session.status === 'PendingConfirmation';
   const canStudentConfirm = isStudent && hasTutorCounter;
-  const canTutorRespond = isTutor && session.status === 'Pending Confirmation' && !session.tutorCounterTime;
+  const canTutorRespond = isTutor && session.status === 'PendingConfirmation' && !session.tutorCounterTime;
 
   return (
     <ScrollView
@@ -257,14 +302,67 @@ export default function SessionDetailScreen() {
             Student proposed: {formatSGT(session.proposedTime)}
           </Text>
           <View style={styles.actionRow}>
-            <Button title="Accept" variant="primary" onPress={handleAcceptTime} loading={updateSession.isPending} style={{ flex: 1 }} />
+            <Button title="Accept" variant="outline" onPress={handleAcceptTime} loading={updateSession.isPending} style={{ flex: 1 }} />
             <Button title="Counter" variant="outline" onPress={() => setShowCounter(!showCounter)} style={{ flex: 1 }} />
           </View>
           {showCounter && (
             <View style={{ marginTop: 12 }}>
-              <Input label="Counter Date (YYYY-MM-DD)" placeholder="2026-06-02" value={counterDate} onChangeText={setCounterDate} keyboardType="numbers-and-punctuation" />
-              <Input label="Counter Time in SGT (HH:MM)" placeholder="16:00" value={counterTime} onChangeText={setCounterTime} keyboardType="numbers-and-punctuation" />
-              <Button title="Propose Counter Time" variant="secondary" onPress={handleCounterTime} loading={updateSession.isPending} />
+              {/* Date picker */}
+              <Text style={[styles.label, { color: colors.foreground }]}>Counter Date</Text>
+              <Pressable
+                style={[styles.pickerButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+                onPress={() => setShowCounterDatePicker(true)}
+              >
+                <Feather name="calendar" size={18} color={colors.primary} />
+                <Text style={[styles.pickerText, { color: colors.foreground }]}>{formattedCounterDate}</Text>
+                <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+              </Pressable>
+
+              {showCounterDatePicker && (
+                <DateTimePicker
+                  value={counterDateTime}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  minimumDate={new Date()}
+                  onChange={onCounterDateChange}
+                  themeVariant="light"
+                />
+              )}
+              {Platform.OS === 'ios' && showCounterDatePicker && (
+                <Button title="Done" variant="outline" onPress={() => setShowCounterDatePicker(false)} style={{ marginBottom: 8 }} />
+              )}
+
+              {/* Time picker */}
+              <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Counter Time (SGT)</Text>
+              <Pressable
+                style={[styles.pickerButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+                onPress={() => setShowCounterTimePicker(true)}
+              >
+                <Feather name="clock" size={18} color={colors.primary} />
+                <Text style={[styles.pickerText, { color: colors.foreground }]}>{formattedCounterTime}</Text>
+                <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+              </Pressable>
+
+              {showCounterTimePicker && (
+                <DateTimePicker
+                  value={counterDateTime}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  is24Hour
+                  onChange={onCounterTimeChange}
+                />
+              )}
+              {Platform.OS === 'ios' && showCounterTimePicker && (
+                <Button title="Done" variant="outline" onPress={() => setShowCounterTimePicker(false)} style={{ marginBottom: 8 }} />
+              )}
+
+              <Button 
+                title="Propose Counter Time" 
+                variant="primary" 
+                onPress={handleCounterTime} 
+                loading={updateSession.isPending} 
+                style={{ marginTop: 16 }}
+              />
             </View>
           )}
         </Card>
@@ -295,6 +393,48 @@ export default function SessionDetailScreen() {
             </>
           ) : (
             <Button title="Add meeting link" variant="primary" onPress={() => setShowLinkForm(true)} icon={<Feather name="link" size={14} color={colors.primaryForeground} />} />
+          )}
+        </Card>
+      )}
+
+      {/* Tutor: edit meeting link */}
+      {isTutor && session.status === 'Confirmed' && session.meetingLink && (
+        <Card style={styles.actionCard}>
+          <Text style={[styles.actionTitle, { color: colors.foreground }]}>Meeting Link</Text>
+          <Pressable
+            style={styles.infoRow}
+            onPress={() => Linking.openURL(session.meetingLink!)}
+          >
+            <Feather name="video" size={14} color={colors.success} />
+            <Text style={[styles.infoValue, { color: colors.primary }]} numberOfLines={1}>
+              {session.meetingLink}
+            </Text>
+          </Pressable>
+          {showLinkForm ? (
+            <>
+              <Input 
+                placeholder="https://zoom.us/j/..." 
+                value={meetingLink} 
+                onChangeText={setMeetingLink} 
+                autoCapitalize="none" 
+                keyboardType="url" 
+                style={{ marginTop: 12 }}
+              />
+              <View style={styles.actionRow}>
+                <Button title="Cancel" variant="outline" onPress={() => setShowLinkForm(false)} style={{ flex: 1 }} />
+                <Button title="Update Link" variant="primary" onPress={handleAddMeetingLink} loading={updateSession.isPending} style={{ flex: 1 }} />
+              </View>
+            </>
+          ) : (
+            <Button 
+              title="Edit Meeting Link" 
+              variant="outline" 
+              onPress={() => {
+                setMeetingLink(session.meetingLink || '');
+                setShowLinkForm(true);
+              }} 
+              style={{ marginTop: 12 }}
+            />
           )}
         </Card>
       )}
@@ -353,4 +493,15 @@ const styles = StyleSheet.create({
   actionSub: { fontSize: 14, marginBottom: 12 },
   actionRow: { flexDirection: 'row', gap: 10 },
   starRow: { flexDirection: 'row', justifyContent: 'center', marginVertical: 12 },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  pickerText: { flex: 1, fontSize: 16 },
 });

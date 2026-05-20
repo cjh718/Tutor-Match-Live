@@ -452,7 +452,7 @@ export const GetSessionsQueryParams = zod.object({
   studentId: zod.coerce.number().optional(),
   tutorId: zod.coerce.number().optional(),
   status: zod
-    .enum(["Pending Confirmation", "Confirmed", "Completed", "Cancelled"])
+    .enum(["PendingConfirmation", "Confirmed", "Completed", "Cancelled"])
     .optional(),
 });
 
@@ -466,7 +466,7 @@ export const GetSessionsResponseItem = zod.object({
   finalTime: zod.coerce.date().nullish(),
   meetingLink: zod.string().nullish(),
   status: zod.enum([
-    "Pending Confirmation",
+    "PendingConfirmation",
     "Confirmed",
     "Completed",
     "Cancelled",
@@ -554,7 +554,7 @@ export const GetSessionResponse = zod.object({
   finalTime: zod.coerce.date().nullish(),
   meetingLink: zod.string().nullish(),
   status: zod.enum([
-    "Pending Confirmation",
+    "PendingConfirmation",
     "Confirmed",
     "Completed",
     "Cancelled",
@@ -628,7 +628,7 @@ export const UpdateSessionBody = zod.object({
   finalTime: zod.coerce.date().optional(),
   meetingLink: zod.string().optional(),
   status: zod
-    .enum(["Pending Confirmation", "Confirmed", "Completed", "Cancelled"])
+    .enum(["PendingConfirmation", "Confirmed", "Completed", "Cancelled"])
     .optional(),
 });
 
@@ -642,7 +642,7 @@ export const UpdateSessionResponse = zod.object({
   finalTime: zod.coerce.date().nullish(),
   meetingLink: zod.string().nullish(),
   status: zod.enum([
-    "Pending Confirmation",
+    "PendingConfirmation",
     "Confirmed",
     "Completed",
     "Cancelled",
@@ -788,11 +788,11 @@ export const GetStudentDashboardParams = zod.object({
 
 export const GetStudentDashboardResponse = zod.object({
   openQuestions: zod.number(),
-  matchedQuestions: zod.number(),
-  scheduledSessions: zod.number(),
+  bidsReceived: zod.number(),        // ✅ Updated from pendingBids
+  pendingTutors: zod.number(),       // ✅ Updated from pendingConfirmation
+  upcomingSessions: zod.number(),    // ✅ Updated from scheduledSessions
   completedSessions: zod.number(),
   totalSpent: zod.number(),
-  pendingBids: zod.number(),
   recentQuestions: zod.array(
     zod.object({
       questionId: zod.number(),
@@ -825,7 +825,7 @@ export const GetStudentDashboardResponse = zod.object({
       bidCount: zod.number(),
     }),
   ),
-  upcomingSessions: zod.array(
+  upcomingSessionsList: zod.array(
     zod.object({
       sessionId: zod.number(),
       questionId: zod.number(),
@@ -836,7 +836,7 @@ export const GetStudentDashboardResponse = zod.object({
       finalTime: zod.coerce.date().nullish(),
       meetingLink: zod.string().nullish(),
       status: zod.enum([
-        "Pending Confirmation",
+        "PendingConfirmation",
         "Confirmed",
         "Completed",
         "Cancelled",
@@ -909,7 +909,7 @@ export const GetTutorDashboardParams = zod.object({
 export const GetTutorDashboardResponse = zod.object({
   openBids: zod.number(),
   acceptedBids: zod.number(),
-  scheduledSessions: zod.number(),
+  upcomingSessions: zod.number(),    // ✅ Updated from scheduledSessions
   completedSessions: zod.number(),
   totalEarned: zod.number(),
   averageRating: zod.number(),
@@ -956,7 +956,7 @@ export const GetTutorDashboardResponse = zod.object({
         .optional(),
     }),
   ),
-  upcomingSessions: zod.array(
+  upcomingSessionsList: zod.array(
     zod.object({
       sessionId: zod.number(),
       questionId: zod.number(),
@@ -967,7 +967,7 @@ export const GetTutorDashboardResponse = zod.object({
       finalTime: zod.coerce.date().nullish(),
       meetingLink: zod.string().nullish(),
       status: zod.enum([
-        "Pending Confirmation",
+        "PendingConfirmation",
         "Confirmed",
         "Completed",
         "Cancelled",

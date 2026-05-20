@@ -45,6 +45,8 @@ export default function StudentTabLayout() {
         name="questions"
         options={{
           href: null,
+          title: "Open Questions",
+          headerShown: true,
         }}
       />
       {/* HIDE sessions tab */}
@@ -52,6 +54,26 @@ export default function StudentTabLayout() {
         name="sessions"
         options={{
           href: null,
+          title: "Upcoming Sessions",
+          headerShown: true,
+        }}
+      />
+      {/* HIDE pending tab */}
+      <Tabs.Screen
+        name="pending"
+        options={{
+          href: null,
+          title: "Pending Tutor",
+          headerShown: true,
+        }}
+      />
+      {/* HIDE bids tab */}
+      <Tabs.Screen
+        name="bids"
+        options={{
+          href: null,
+          title: "Bids received",
+          headerShown: true,
         }}
       />
       <Tabs.Screen

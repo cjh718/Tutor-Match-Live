@@ -20,10 +20,10 @@ export const sessionsTable = pgTable("sessions", {
   finalTime: timestamp("final_time", { withTimezone: true }),
   meetingLink: text("meeting_link"),
   status: text("status", {
-    enum: ["Pending Confirmation", "Confirmed", "Completed", "Cancelled"],
+    enum: ["PendingConfirmation", "Confirmed", "Completed", "Cancelled"],
   })
     .notNull()
-    .default("Pending Confirmation"),
+    .default("PendingConfirmation"),
 });
 
 export const insertSessionSchema = createInsertSchema(sessionsTable).omit({

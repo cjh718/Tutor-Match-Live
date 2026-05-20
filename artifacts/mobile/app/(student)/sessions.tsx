@@ -12,8 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
 
 function statusVariant(status: string) {
-  if (status === 'Confirmed') return 'success';
-  if (status === 'Pending Confirmation') return 'warning';
+  if (status === 'Confirmed' || status === 'Scheduled') return 'success';
+  if (status === 'PendingConfirmation') return 'warning';
   if (status === 'Completed') return 'outline';
   return 'destructive';
 }
@@ -23,6 +23,27 @@ function formatSGT(dateStr: string | null | undefined) {
   return new Date(dateStr).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', dateStyle: 'medium', timeStyle: 'short' });
 }
 
+function getStatusLabel(status: string) {
+  switch(status) {
+    case "Open":
+      return "Open";
+    case "BidReceived":
+      return "Bid Received";
+    case "Matched":
+      return "Awaiting Schedule";
+    case "PendingConfirmation":
+      return "Pending Tutor Acceptance";
+    case "Scheduled":
+      return "Session Scheduled";
+    case "Completed":
+      return "Completed";
+    case "Cancelled":
+      return "Cancelled";
+    default:
+      return status;
+  }
+}
+
 export default function StudentSessionsScreen() {
   const { user } = useAuth();
   const colors = useColors();
@@ -30,21 +51,23 @@ export default function StudentSessionsScreen() {
 
   const { filter } = useLocalSearchParams<{ filter?: string }>();
 
-  const getQueryParams = () => {
-    const baseParams: { studentId?: number; status?: any } = { studentId: user?.userId };
-    if (filter === 'pending') {
-      return { ...baseParams, status: 'Pending Confirmation' as any };
-    }
-    if (filter === 'upcoming') {
-      return { ...baseParams, status: 'Confirmed' as any };
-    }
-    return baseParams;
-  };
+  // For "upcoming" filter, fetch all student sessions and filter client-side
+  const isUpcomingView = filter === 'upcoming';
 
-  const { data: sessions, isLoading, refetch, isRefetching } = useGetSessions(
-    getQueryParams(),
-    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey(getQueryParams()) } }
+  const queryParams = { studentId: user?.userId };
+
+  const { data: allSessions, isLoading, refetch, isRefetching } = useGetSessions(
+    queryParams,
+    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey(queryParams) } }
   );
+
+  // Client-side filter for upcoming view to include PendingConfirmation + Confirmed + Scheduled
+  const sessions = isUpcomingView
+  ? (allSessions ?? []).filter(s =>
+      s.status === 'Confirmed' ||
+      s.status === 'Scheduled'
+    )
+  : (allSessions ?? []);
 
   useFocusEffect(
     useCallback(() => {
@@ -99,7 +122,7 @@ export default function StudentSessionsScreen() {
                 <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {s.question?.title ?? 'Session'}
                 </Text>
-                <Badge label={s.status} variant={statusVariant(s.status)} />
+                <Badge label={getStatusLabel(s.status)} variant="blue" />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="user" size={13} color={colors.mutedForeground} />

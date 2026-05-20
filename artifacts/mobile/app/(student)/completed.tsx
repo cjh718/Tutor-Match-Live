@@ -13,7 +13,7 @@ import { useCallback } from 'react';
 
 function statusVariant(status: string) {
   if (status === 'Confirmed') return 'success';
-  if (status === 'Pending Confirmation') return 'warning';
+  if (status === 'PendingConfirmation') return 'warning';
   if (status === 'Completed') return 'outline';
   return 'destructive';
 }
@@ -76,7 +76,7 @@ export default function StudentCompletedScreen() {
                 <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {s.question?.title ?? 'Session'}
                 </Text>
-                <Badge label={s.status} variant={statusVariant(s.status)} />
+                <Badge label={getStatusLabel(q.status)} variant="blue" />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="user" size={13} color={colors.mutedForeground} />

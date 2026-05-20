@@ -18,6 +18,7 @@ function parseId(raw: string | string[]): number {
   return parseInt(str, 10);
 }
 
+// ========== STUDENT DASHBOARD ==========
 router.get(
   "/dashboard/student/:studentId",
   authMiddleware,
@@ -28,8 +29,8 @@ router.get(
       return;
     }
 
-    // Open Questions = "Open"
-    const [openCount] = await db
+    // 1. Open Questions = "Open"
+    const [openQuestionsCount] = await db
       .select({ value: count() })
       .from(questionsTable)
       .where(
@@ -39,43 +40,44 @@ router.get(
         ),
       );
 
-    // Bids Received = "BidReceived"
-    const [bidReceivedCount] = await db
-      .select({ value: count() })
-      .from(questionsTable)
-      .where(
-        and(
-          eq(questionsTable.studentId, studentId),
-          eq(questionsTable.status, "BidReceived"),
-        ),
-      );
-
-    // Upcoming Sessions = "Matched" + "Scheduled"
-    const [upcomingCount] = await db
+    // 2. Bids Received = "BidReceived" OR "Matched" (student accepted but haven't proposed time)
+    const [bidsReceivedCount] = await db
       .select({ value: count() })
       .from(questionsTable)
       .where(
         and(
           eq(questionsTable.studentId, studentId),
           or(
+            eq(questionsTable.status, "BidReceived"),
             eq(questionsTable.status, "Matched"),
-            eq(questionsTable.status, "Scheduled")
-          )
-        )
+          ),
+        ),
       );
 
-    // Pending Tutors = "PendingConfirmation" (from sessions)
-    const [pendingConfirmation] = await db
+    // 3. Pending Tutors = "PendingConfirmation" (student proposed time, waiting for tutor)
+    const [pendingTutorsCount] = await db
+      .select({ value: count() })
+      .from(questionsTable)
+      .where(
+        and(
+          eq(questionsTable.studentId, studentId),
+          eq(questionsTable.status, "PendingConfirmation"),
+        ),
+      );
+
+    // 4. Upcoming Sessions = "Confirmed" (from sessionsTable)
+    const [studentUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
       .where(
         and(
           eq(sessionsTable.studentId, studentId),
-          eq(sessionsTable.status, "Pending Confirmation"),
+          eq(sessionsTable.status, "Confirmed"),
         ),
       );
 
-    const [completedCount] = await db
+    // 5. Completed Sessions
+    const [studentCompletedSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
       .where(
@@ -85,21 +87,7 @@ router.get(
         ),
       );
 
-    const pendingBidsQuery = await db
-      .select({ value: count() })
-      .from(bidsTable)
-      .innerJoin(
-        questionsTable,
-        eq(bidsTable.questionId, questionsTable.questionId),
-      )
-      .where(
-        and(
-          eq(questionsTable.studentId, studentId),
-          eq(bidsTable.status, "Pending"),
-        ),
-      );
-    const [pendingBids] = pendingBidsQuery;
-
+    // Recent Questions (for display)
     const recentQuestions = await db
       .select()
       .from(questionsTable)
@@ -126,7 +114,8 @@ router.get(
       }),
     );
 
-    const upcomingSessions = await db
+    // Upcoming Sessions List (for display)
+    const upcomingSessionsList = await db
       .select()
       .from(sessionsTable)
       .where(
@@ -138,7 +127,7 @@ router.get(
       .limit(5);
 
     const upcomingEnriched = await Promise.all(
-      upcomingSessions.map(async (s) => {
+      upcomingSessionsList.map(async (s) => {
         const [student] = await db
           .select()
           .from(usersTable)
@@ -162,19 +151,26 @@ router.get(
       }),
     );
 
+    // DEBUG LOGS - Add this before res.json
+    console.log("=== BACKEND STUDENT DASHBOARD DEBUG ===");
+    console.log("bidsReceivedCount:", Number(bidsReceivedCount.value));
+    console.log("pendingTutorsCount:", Number(pendingTutorsCount.value));
+    console.log("openQuestionsCount:", Number(openQuestionsCount.value));
+    
     res.json({
-      openQuestions: Number(openCount.value),
-      pendingBids: Number(bidReceivedCount.value),  // Bids Received
-      scheduledSessions: Number(upcomingCount.value),  // Upcoming Sessions (Matched + Scheduled)
-      pendingConfirmation: Number(pendingConfirmation.value),  // Pending Tutors
-      completedSessions: Number(completedCount.value),
+      openQuestions: Number(openQuestionsCount.value),
+      bidsReceived: Number(bidsReceivedCount.value),
+      pendingTutors: Number(pendingTutorsCount.value),
+      upcomingSessions: Number(studentUpcomingSessionsCount.value),
+      completedSessions: Number(studentCompletedSessionsCount.value),
       totalSpent: 0,
       recentQuestions: recentWithStudents,
-      upcomingSessions: upcomingEnriched,
+      upcomingSessionsList: upcomingEnriched,
     });
   },
 );
 
+// ========== TUTOR DASHBOARD ==========
 router.get(
   "/dashboard/tutor/:tutorId",
   authMiddleware,
@@ -185,8 +181,8 @@ router.get(
       return;
     }
 
-    // Open Bids = my Pending bids on Open questions
-    const [openBidsCount] = await db
+    // 1. Open Bids = Pending bids on Open or BidReceived questions
+    const [tutorOpenBidsCount] = await db
       .select({ value: count() })
       .from(bidsTable)
       .innerJoin(
@@ -197,13 +193,15 @@ router.get(
         and(
           eq(bidsTable.tutorId, tutorId),
           eq(bidsTable.status, "Pending"),
-          eq(questionsTable.status, "Open"),
+          or(
+            eq(questionsTable.status, "Open"),
+            eq(questionsTable.status, "BidReceived"),
+          ),
         ),
       );
 
-    // Accepted Bids = my Accepted bids on questions that haven't been completed/cancelled
-    // This includes Matched (student hasn't proposed time) AND PendingConfirmation/Scheduled (student proposed, session in progress)
-    const [acceptedBidsCount] = await db
+    // 2. Accepted Bids = Accepted bids on Matched or PendingConfirmation questions
+    const [tutorAcceptedBidsCount] = await db
       .select({ value: count() })
       .from(bidsTable)
       .innerJoin(
@@ -216,26 +214,24 @@ router.get(
           eq(bidsTable.status, "Accepted"),
           or(
             eq(questionsTable.status, "Matched"),
+            eq(questionsTable.status, "PendingConfirmation"),
           ),
         ),
       );
 
-    // Upcoming Sessions = sessions with "Pending Confirmation" or "Scheduled"
-    const [upcomingCount] = await db
+    // 3. Upcoming Sessions = Confirmed sessions
+    const [tutorUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
       .where(
         and(
           eq(sessionsTable.tutorId, tutorId),
-          or(
-            eq(sessionsTable.status, "Pending Confirmation"),
-            eq(sessionsTable.status, "Scheduled"),
-          ),
+          eq(sessionsTable.status, "Confirmed"),
         ),
       );
 
-    // Completed Sessions
-    const [completedCount] = await db
+    // 4. Completed Sessions
+    const [tutorCompletedSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
       .where(
@@ -276,7 +272,7 @@ router.get(
       .from(reviewsTable)
       .where(eq(reviewsTable.tutorId, tutorId));
 
-    // Recent bids
+    // Recent bids (for display)
     const recentBidsData = await db
       .select()
       .from(bidsTable)
@@ -294,23 +290,20 @@ router.get(
       }),
     );
 
-    // Upcoming sessions (Pending Confirmation or Scheduled)
-    const upcomingSessionsData = await db
+    // Upcoming sessions list (for display)
+    const upcomingSessionsList = await db
       .select()
       .from(sessionsTable)
       .where(
         and(
           eq(sessionsTable.tutorId, tutorId),
-          or(
-            eq(sessionsTable.status, "Pending Confirmation"),
-            eq(sessionsTable.status, "Scheduled"),
-          ),
+          eq(sessionsTable.status, "Confirmed"),
         ),
       )
       .limit(5);
 
     const upcomingEnriched = await Promise.all(
-      upcomingSessionsData.map(async (s) => {
+      upcomingSessionsList.map(async (s) => {
         const [student] = await db
           .select()
           .from(usersTable)
@@ -335,14 +328,16 @@ router.get(
     );
 
     res.json({
-      openBids: Number(openBidsCount.value),
-      acceptedBids: Number(acceptedBidsCount.value),
-      scheduledSessions: Number(upcomingCount.value),
-      completedSessions: Number(completedCount.value),
+      openBids: Number(tutorOpenBidsCount.value),
+      acceptedBids: Number(tutorAcceptedBidsCount.value),
+      upcomingSessions: Number(tutorUpcomingSessionsCount.value),
+      completedSessions: Number(tutorCompletedSessionsCount.value),
       totalEarned,
-      averageRating: avgRating ? parseFloat(parseFloat(avgRating).toFixed(2)) : 0,
+      averageRating: avgRating
+        ? parseFloat(parseFloat(avgRating).toFixed(2))
+        : 0,
       recentBids: recentBidsEnriched,
-      upcomingSessions: upcomingEnriched,
+      upcomingSessionsList: upcomingEnriched,
     });
   },
 );

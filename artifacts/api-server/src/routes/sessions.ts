@@ -59,8 +59,8 @@ router.get("/sessions", authMiddleware, async (req, res): Promise<void> => {
       eq(
         sessionsTable.status,
         status as
-          | "Pending Confirmation"
-          | "Scheduled"
+          | "PendingConfirmation"
+          | "Confirmed"
           | "Completed"
           | "Cancelled",
       ),
@@ -193,8 +193,8 @@ router.put(
     if (meetingLink !== undefined) updates.meetingLink = meetingLink;
     if (status !== undefined) {
       updates.status = status as
-        | "Pending Confirmation"
-        | "Scheduled"
+        | "PendingConfirmation"
+        | "Confirmed"
         | "Completed"
         | "Cancelled";
     }
@@ -229,7 +229,7 @@ router.put(
     }
 
     // When tutor confirms the session
-    if (status === "Scheduled") {
+    if (status === "Confirmed") {
       // Update question status to "Scheduled"
       await db
         .update(questionsTable)

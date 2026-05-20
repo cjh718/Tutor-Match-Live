@@ -21,6 +21,27 @@ function statusVariant(status: string) {
   return 'destructive';
 }
 
+function getStatusLabel(status: string) {
+  switch(status) {
+    case "Open":
+      return "Open";
+    case "BidReceived":
+      return "Bid Received";
+    case "Matched":
+      return "Awaiting Schedule";
+    case "PendingConfirmation":
+      return "Pending Tutor Acceptance";
+    case "Scheduled":
+      return "Session Scheduled";
+    case "Completed":
+      return "Completed";
+    case "Cancelled":
+      return "Cancelled";
+    default:
+      return status;
+  }
+}
+
 export default function StudentQuestionsScreen() {
   const { user } = useAuth();
   const colors = useColors();
@@ -97,7 +118,7 @@ export default function StudentQuestionsScreen() {
                 <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {q.title}
                 </Text>
-                <Badge label={q.status} variant={statusVariant(q.status)} />
+                <Badge label={getStatusLabel(q.status)} variant="blue" />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="book" size={13} color={colors.mutedForeground} />

@@ -13,7 +13,7 @@ import { useCallback } from 'react';
 
 function statusVariant(status: string) {
   if (status === 'Scheduled') return 'success';
-  if (status === 'Pending Confirmation') return 'warning';
+  if (status === 'PendingConfirmation') return 'warning';
   if (status === 'Completed') return 'outline';
   return 'destructive';
 }
@@ -21,6 +21,27 @@ function statusVariant(status: string) {
 function formatSGT(dateStr: string | null | undefined) {
   if (!dateStr) return 'TBD';
   return new Date(dateStr).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function getStatusLabel(status: string) {
+  switch(status) {
+    case "Open":
+      return "Open";
+    case "BidReceived":
+      return "Bidded";
+    case "Matched":
+      return "Awaiting Schedule";
+    case "PendingConfirmation":
+      return "Pending Tutor Acceptance";
+    case "Scheduled":
+      return "Session Scheduled";
+    case "Completed":
+      return "Completed";
+    case "Cancelled":
+      return "Cancelled";
+    default:
+      return status;
+  }
 }
 
 export default function TutorCompletedScreen() {
@@ -76,7 +97,7 @@ export default function TutorCompletedScreen() {
                 <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {s.question?.title ?? 'Session'}
                 </Text>
-                <Badge label={s.status} variant={statusVariant(s.status)} />
+                <Badge label={getStatusLabel(item.question.status)} variant="blue" />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="user" size={13} color={colors.mutedForeground} />

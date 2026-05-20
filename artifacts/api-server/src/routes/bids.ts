@@ -216,7 +216,7 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
 
   const [bid] = await db
     .update(bidsTable)
-    .set({ status: status as "Pending" | "Accepted" | "Rejected" })
+    .set({ status: status as "Pending" | "Accepted" | "Rejected" | "Withdrawn" })
     .where(eq(bidsTable.bidId, bidId))
     .returning();
 
