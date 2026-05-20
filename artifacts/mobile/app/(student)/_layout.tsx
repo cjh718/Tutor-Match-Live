@@ -1,8 +1,10 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { Platform, StyleSheet, useColorScheme } from "react-native";
+import { Platform, StyleSheet, useColorScheme, Pressable } from "react-native";
 import { useColors } from "@/hooks/useColors";
+import { NotificationBellIcon } from "@/components/NotificationBellIcon";
+import { router } from "expo-router";
 
 export default function StudentTabLayout() {
   const colors = useColors();
@@ -16,6 +18,15 @@ export default function StudentTabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: true,
+        headerRight: () => (
+          <Pressable
+            onPress={() => router.push("/notifications")}
+            style={{ marginRight: 16 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <NotificationBellIcon color={colors.foreground} size={22} />
+          </Pressable>
+        ),
         tabBarStyle: {
           backgroundColor: isIOS ? "transparent" : colors.background,
           borderTopColor: colors.border,
