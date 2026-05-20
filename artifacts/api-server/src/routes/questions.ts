@@ -25,9 +25,7 @@ router.get("/questions", authMiddleware, async (req, res): Promise<void> => {
         status as
           | "Open"
           | "BidReceived"
-          | "Matched"
-          | "PendingConfirmation"
-          | "Confirmed"
+          | "Scheduled"
           | "Completed"
           | "Cancelled",
       ),
@@ -201,9 +199,7 @@ router.put(
       updateData.status = status as
         | "Open"
         | "BidReceived"
-        | "Matched"
-        | "PendingConfirmation"
-        | "Confirmed"
+        | "Scheduled"
         | "Completed"
         | "Cancelled";
     }
@@ -278,7 +274,6 @@ router.delete(
 
     // Only prevent deletion for certain statuses
     if (
-      existing.status === "PendingConfirmation" ||
       existing.status === "Scheduled" ||
       existing.status === "Completed"
     ) {

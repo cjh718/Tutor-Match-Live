@@ -24,24 +24,60 @@ import { useCallback } from "react";
 import { router, useFocusEffect, Stack } from "expo-router";
 
 function getStatusLabel(status: string) {
-  switch(status) {
-    case "Open":
-      return "Open";
-    case "BidReceived":
-      return "Bidded";
-    case "Matched":
-      return "Awaiting Schedule";
-    case "PendingConfirmation":
-      return "Pending Tutor Acceptance";
-    case "Scheduled":
-      return "Session Scheduled";
-    case "Completed":
-      return "Completed";
-    case "Cancelled":
-      return "Cancelled";
-    default:
-      return status;
+  switch (status) {
+    case "Open": return "Open";
+    case "BidReceived": return "Bidded";
+    case "Scheduled": return "Session Scheduled";
+    case "Completed": return "Completed";
+    case "Cancelled": return "Cancelled";
+    default: return status;
   }
+}
+
+function formatSGT(dateStr: string | Date | null | undefined) {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleString("en-SG", {
+    timeZone: "Asia/Singapore",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function BidTimingInfo({ bid }: { bid: any }) {
+  const colors = useColors();
+  const now = new Date();
+  const expiry = bid.windowExpiresAt ? new Date(bid.windowExpiresAt) : null;
+  const nowValid = bid.offerNow && expiry && expiry > now;
+  const minutesLeft = expiry
+    ? Math.max(0, Math.ceil((expiry.getTime() - now.getTime()) / 60000))
+    : 0;
+
+  if (!bid.offerNow && !bid.specificTime) return null;
+
+  return (
+    <View style={{ gap: 4, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+      {bid.offerNow && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Feather
+            name="zap"
+            size={13}
+            color={nowValid ? "#22c55e" : colors.mutedForeground}
+          />
+          <Text style={{ fontSize: 12, color: nowValid ? "#22c55e" : colors.mutedForeground }}>
+            {nowValid ? `NOW (${minutesLeft}m left)` : "NOW (expired)"}
+          </Text>
+        </View>
+      )}
+      {bid.specificTime && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Feather name="calendar" size={13} color={colors.primary} />
+          <Text style={{ fontSize: 12, color: colors.foreground }}>
+            {formatSGT(bid.specificTime)}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function TutorMyBidsScreen() {
@@ -50,7 +86,7 @@ export default function TutorMyBidsScreen() {
   const insets = useSafeAreaInsets();
 
   <Stack.Screen options={{ title: "My Active Bids" }} />;
-  
+
   const {
     data: myBids,
     isLoading: bidsLoading,
@@ -91,14 +127,15 @@ export default function TutorMyBidsScreen() {
     }, [refetchBids, refetchQuestions]),
   );
 
-  // Build a map of questionId -> question for fast lookup
   const questionMap = new Map();
   allQuestions?.forEach((q) => {
     questionMap.set(q.questionId, q);
   });
 
-  // Join bids with their questions
-  const bidRows: { bid: NonNullable<typeof myBids>[number]; question: NonNullable<typeof allQuestions>[number] }[] = (myBids ?? [])
+  const bidRows: {
+    bid: NonNullable<typeof myBids>[number];
+    question: NonNullable<typeof allQuestions>[number];
+  }[] = (myBids ?? [])
     .map((bid) => {
       const question = questionMap.get(bid.questionId);
       if (!question) return null;
@@ -165,7 +202,10 @@ export default function TutorMyBidsScreen() {
                 >
                   {item.question.title}
                 </Text>
-                <Badge label={getStatusLabel(item.question.status)} variant="blue" />
+                <Badge
+                  label={getStatusLabel(item.question.status)}
+                  variant="blue"
+                />
               </View>
               <Text
                 style={[styles.metaText, { color: colors.mutedForeground }]}
@@ -184,6 +224,7 @@ export default function TutorMyBidsScreen() {
               >
                 {item.bid.message}
               </Text>
+              <BidTimingInfo bid={item.bid} />
             </Card>
           </Pressable>
         )}

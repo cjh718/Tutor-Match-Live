@@ -43,9 +43,10 @@ async function enrichSession(session: typeof sessionsTable.$inferSelect) {
 }
 
 router.get("/sessions", authMiddleware, async (req, res): Promise<void> => {
-  const { studentId, tutorId, status } = req.query as {
+  const { studentId, tutorId, questionId, status } = req.query as {
     studentId?: string;
     tutorId?: string;
+    questionId?: string;
     status?: string;
   };
 
@@ -54,16 +55,11 @@ router.get("/sessions", authMiddleware, async (req, res): Promise<void> => {
     conditions.push(eq(sessionsTable.studentId, parseInt(studentId, 10)));
   if (tutorId)
     conditions.push(eq(sessionsTable.tutorId, parseInt(tutorId, 10)));
+  if (questionId)
+    conditions.push(eq(sessionsTable.questionId, parseInt(questionId, 10)));
   if (status) {
     conditions.push(
-      eq(
-        sessionsTable.status,
-        status as
-          | "PendingConfirmation"
-          | "Confirmed"
-          | "Completed"
-          | "Cancelled",
-      ),
+      eq(sessionsTable.status, status as "Confirmed" | "Completed" | "Cancelled"),
     );
   }
 
@@ -74,60 +70,6 @@ router.get("/sessions", authMiddleware, async (req, res): Promise<void> => {
 
   const result = await Promise.all(sessions.map(enrichSession));
   res.json(result);
-});
-
-router.post("/sessions", authMiddleware, async (req, res): Promise<void> => {
-  if (req.user!.role !== "student") {
-    res.status(403).json({ error: "Only students can propose sessions" });
-    return;
-  }
-
-  const { questionId, tutorId, proposedTime } = req.body as {
-    questionId?: number;
-    tutorId?: number;
-    proposedTime?: string;
-  };
-
-  if (!questionId || !tutorId || !proposedTime) {
-    res.status(400).json({ error: "Missing required fields" });
-    return;
-  }
-
-  const [session] = await db
-    .insert(sessionsTable)
-    .values({
-      questionId,
-      studentId: req.user!.userId,
-      tutorId,
-      proposedTime: new Date(proposedTime),
-    })
-    .returning();
-
-  // Update question status to "PendingConfirmation" (student proposed time, waiting for tutor)
-  await db
-    .update(questionsTable)
-    .set({ status: "PendingConfirmation" })
-    .where(eq(questionsTable.questionId, questionId));
-
-  const [student] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.userId, req.user!.userId));
-  const [question] = await db
-    .select()
-    .from(questionsTable)
-    .where(eq(questionsTable.questionId, questionId));
-
-  await notify({
-    userId: tutorId,
-    type: "session_proposed",
-    title: "Session time proposed",
-    message: `${student.name} proposed a session time for "${question.title}"`,
-    relatedId: session.sessionId,
-  });
-
-  const enriched = await enrichSession(session);
-  res.status(201).json(enriched);
 });
 
 router.get(
@@ -175,28 +117,25 @@ router.put(
       return;
     }
 
-    const { proposedTime, tutorCounterTime, finalTime, meetingLink, status } =
-      req.body as {
-        proposedTime?: string;
-        tutorCounterTime?: string;
-        finalTime?: string;
-        meetingLink?: string;
-        status?: string;
-      };
+    const { meetingLink, status } = req.body as {
+      meetingLink?: string;
+      status?: string;
+    };
+
+    // Role guards
+    if (meetingLink !== undefined && req.user!.role !== "tutor") {
+      res.status(403).json({ error: "Only tutors can add a meeting link" });
+      return;
+    }
+    if (status === "Completed" && req.user!.role !== "tutor") {
+      res.status(403).json({ error: "Only tutors can mark sessions as completed" });
+      return;
+    }
 
     const updates: Partial<typeof sessionsTable.$inferInsert> = {};
-    if (proposedTime !== undefined)
-      updates.proposedTime = new Date(proposedTime);
-    if (tutorCounterTime !== undefined)
-      updates.tutorCounterTime = new Date(tutorCounterTime);
-    if (finalTime !== undefined) updates.finalTime = new Date(finalTime);
     if (meetingLink !== undefined) updates.meetingLink = meetingLink;
     if (status !== undefined) {
-      updates.status = status as
-        | "PendingConfirmation"
-        | "Confirmed"
-        | "Completed"
-        | "Cancelled";
+      updates.status = status as "Confirmed" | "Completed" | "Cancelled";
     }
 
     const [session] = await db
@@ -218,58 +157,31 @@ router.put(
       .from(questionsTable)
       .where(eq(questionsTable.questionId, session.questionId));
 
-    if (tutorCounterTime) {
-      await notify({
-        userId: session.studentId,
-        type: "time_countered",
-        title: "Tutor proposed a different time",
-        message: `${tutor.name} countered the session time for "${question.title}"`,
-        relatedId: sessionId,
-      });
-    }
-
-    // When tutor confirms the session
-    if (status === "Confirmed") {
-      // Update question status to "Scheduled"
-      await db
-        .update(questionsTable)
-        .set({ status: "Scheduled" })
-        .where(eq(questionsTable.questionId, session.questionId));
-
-      const notifyUserId =
-        req.user!.userId === session.studentId
-          ? session.tutorId
-          : session.studentId;
-      const confirmerName =
-        req.user!.userId === session.studentId ? student.name : tutor.name;
-      await notify({
-        userId: notifyUserId,
-        type: "session_confirmed",
-        title: "Session confirmed",
-        message: `${confirmerName} confirmed the session for "${question.title}"`,
-        relatedId: sessionId,
-      });
-    }
-
     if (meetingLink) {
       await notify({
         userId: session.studentId,
         type: "meeting_link_added",
         title: "Meeting link added",
-        message: `${tutor.name} added a meeting link for your session`,
+        message: `${tutor.name} added a meeting link for your session on "${question.title}"`,
         relatedId: sessionId,
       });
     }
 
-    // When session is completed
     if (status === "Completed") {
       await db
         .update(questionsTable)
         .set({ status: "Completed" })
         .where(eq(questionsTable.questionId, session.questionId));
+
+      await notify({
+        userId: session.studentId,
+        type: "session_completed",
+        title: "Session completed",
+        message: `${tutor.name} marked the session for "${question.title}" as completed`,
+        relatedId: sessionId,
+      });
     }
 
-    // When session is cancelled
     if (status === "Cancelled") {
       await db
         .update(questionsTable)

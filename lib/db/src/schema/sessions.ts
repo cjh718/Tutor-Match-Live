@@ -15,15 +15,13 @@ export const sessionsTable = pgTable("sessions", {
   tutorId: integer("tutor_id")
     .notNull()
     .references(() => usersTable.userId),
-  proposedTime: timestamp("proposed_time", { withTimezone: true }),
-  tutorCounterTime: timestamp("tutor_counter_time", { withTimezone: true }),
   finalTime: timestamp("final_time", { withTimezone: true }),
   meetingLink: text("meeting_link"),
   status: text("status", {
-    enum: ["PendingConfirmation", "Confirmed", "Completed", "Cancelled"],
+    enum: ["Confirmed", "Completed", "Cancelled"],
   })
     .notNull()
-    .default("PendingConfirmation"),
+    .default("Confirmed"),
 });
 
 export const insertSessionSchema = createInsertSchema(sessionsTable).omit({

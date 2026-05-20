@@ -1,4 +1,4 @@
-import { integer, pgTable, real, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, real, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { questionsTable } from "./questions";
@@ -17,6 +17,9 @@ export const bidsTable = pgTable("bids", {
   status: text("status", { enum: ["Pending", "Accepted", "Rejected", "Withdrawn"] })
     .notNull()
     .default("Pending"),
+  offerNow: boolean("offer_now").notNull().default(false),
+  windowExpiresAt: timestamp("window_expires_at", { withTimezone: true }),
+  specificTime: timestamp("specific_time", { withTimezone: true }),
   createdDate: timestamp("created_date", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -24,6 +27,7 @@ export const insertBidSchema = createInsertSchema(bidsTable).omit({
   bidId: true,
   createdDate: true,
   status: true,
+  windowExpiresAt: true,
 });
 export type InsertBid = z.infer<typeof insertBidSchema>;
 export type Bid = typeof bidsTable.$inferSelect;

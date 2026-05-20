@@ -12,36 +12,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
 
 function statusVariant(status: string) {
-  if (status === 'Confirmed' || status === 'Scheduled') return 'success';
-  if (status === 'PendingConfirmation') return 'warning';
+  if (status === 'Confirmed') return 'success';
   if (status === 'Completed') return 'outline';
   return 'destructive';
+}
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case 'Confirmed': return 'Confirmed';
+    case 'Completed': return 'Completed';
+    case 'Cancelled': return 'Cancelled';
+    default: return status;
+  }
 }
 
 function formatSGT(dateStr: string | null | undefined) {
   if (!dateStr) return 'TBD';
   return new Date(dateStr).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', dateStyle: 'medium', timeStyle: 'short' });
-}
-
-function getStatusLabel(status: string) {
-  switch(status) {
-    case "Open":
-      return "Open";
-    case "BidReceived":
-      return "Bid Received";
-    case "Matched":
-      return "Awaiting Schedule";
-    case "PendingConfirmation":
-      return "Pending Tutor Acceptance";
-    case "Scheduled":
-      return "Session Scheduled";
-    case "Completed":
-      return "Completed";
-    case "Cancelled":
-      return "Cancelled";
-    default:
-      return status;
-  }
 }
 
 export default function StudentSessionsScreen() {
@@ -51,33 +38,28 @@ export default function StudentSessionsScreen() {
 
   const { filter } = useLocalSearchParams<{ filter?: string }>();
 
-  // For "upcoming" filter, fetch all student sessions and filter client-side
   const isUpcomingView = filter === 'upcoming';
 
   const queryParams = { studentId: user?.userId };
 
   const { data: allSessions, isLoading, refetch, isRefetching } = useGetSessions(
     queryParams,
-    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey(queryParams) } }
+    { query: { enabled: !!user?.userId, queryKey: getGetSessionsQueryKey(queryParams) } },
   );
-
-  // Client-side filter for upcoming view to include PendingConfirmation + Confirmed + Scheduled
-  const sessions = isUpcomingView
-  ? (allSessions ?? []).filter(s =>
-      s.status === 'Confirmed' ||
-      s.status === 'Scheduled'
-    )
-  : (allSessions ?? []);
 
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
-  const sorted = [...(sessions ?? [])].sort((a, b) => {
-    const ta = a.finalTime ?? a.proposedTime;
-    const tb = b.finalTime ?? b.proposedTime;
+  const sessions = isUpcomingView
+    ? (allSessions ?? []).filter((s) => s.status === 'Confirmed')
+    : (allSessions ?? []);
+
+  const sorted = [...sessions].sort((a, b) => {
+    const ta = a.finalTime;
+    const tb = b.finalTime;
     if (!ta && !tb) return 0;
     if (!ta) return 1;
     if (!tb) return -1;
@@ -85,13 +67,11 @@ export default function StudentSessionsScreen() {
   });
 
   const getTitle = () => {
-    if (filter === 'pending') return 'Pending Tutors';
     if (filter === 'upcoming') return 'Upcoming Sessions';
     return 'My Sessions';
   };
 
   const getEmptyDescription = () => {
-    if (filter === 'pending') return 'No sessions waiting for tutor confirmation.';
     if (filter === 'upcoming') return 'No upcoming sessions scheduled.';
     return 'Accept a tutor bid to schedule your first session.';
   };
@@ -99,7 +79,7 @@ export default function StudentSessionsScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
-        {[1, 2, 3].map(i => <Skeleton key={i} height={100} style={{ marginBottom: 12 }} />)}
+        {[1, 2, 3].map((i) => <Skeleton key={i} height={100} style={{ marginBottom: 12 }} />)}
       </View>
     );
   }
@@ -108,7 +88,7 @@ export default function StudentSessionsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={sorted}
-        keyExtractor={s => String(s.sessionId)}
+        keyExtractor={(s) => String(s.sessionId)}
         contentContainerStyle={[styles.list, { paddingTop: 16, paddingBottom: insets.bottom + 100 }]}
         scrollEnabled={sorted.length > 0}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
@@ -122,7 +102,7 @@ export default function StudentSessionsScreen() {
                 <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {s.question?.title ?? 'Session'}
                 </Text>
-                <Badge label={getStatusLabel(s.status)} variant="blue" />
+                <Badge label={getStatusLabel(s.status)} variant={statusVariant(s.status)} />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="user" size={13} color={colors.mutedForeground} />
@@ -133,7 +113,7 @@ export default function StudentSessionsScreen() {
               <View style={styles.metaRow}>
                 <Feather name="clock" size={13} color={colors.mutedForeground} />
                 <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
-                  {formatSGT(s.finalTime ?? s.proposedTime)}
+                  {formatSGT(s.finalTime)}
                 </Text>
               </View>
               {s.meetingLink ? (

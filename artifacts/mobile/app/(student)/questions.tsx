@@ -14,31 +14,19 @@ import { useCallback } from 'react';
 function statusVariant(status: string) {
   if (status === 'Open') return 'outline';
   if (status === 'BidReceived') return 'warning';
-  if (status === 'Matched') return 'success';
-  if (status === 'PendingConfirmation') return 'warning';
   if (status === 'Scheduled') return 'success';
   if (status === 'Completed') return 'outline';
   return 'destructive';
 }
 
 function getStatusLabel(status: string) {
-  switch(status) {
-    case "Open":
-      return "Open";
-    case "BidReceived":
-      return "Bid Received";
-    case "Matched":
-      return "Awaiting Schedule";
-    case "PendingConfirmation":
-      return "Pending Tutor Acceptance";
-    case "Scheduled":
-      return "Session Scheduled";
-    case "Completed":
-      return "Completed";
-    case "Cancelled":
-      return "Cancelled";
-    default:
-      return status;
+  switch (status) {
+    case 'Open': return 'Open';
+    case 'BidReceived': return 'Bid Received';
+    case 'Scheduled': return 'Session Scheduled';
+    case 'Completed': return 'Completed';
+    case 'Cancelled': return 'Cancelled';
+    default: return status;
   }
 }
 
@@ -49,53 +37,47 @@ export default function StudentQuestionsScreen() {
 
   const { status, filter } = useLocalSearchParams<{ status?: string; filter?: string }>();
 
-  // For "bids received" view, fetch all questions and filter client-side
-  // since API only supports exact status match
   const isBidsReceivedView = filter === 'bids-received';
 
-  // Type assertion needed because generated types don't include all statuses
   const queryParams = status && !isBidsReceivedView
     ? { studentId: user?.userId, status: status as any }
     : { studentId: user?.userId };
 
   const { data: allQuestions, isLoading, refetch, isRefetching } = useGetQuestions(
     queryParams,
-    { query: { enabled: !!user?.userId, queryKey: getGetQuestionsQueryKey(queryParams) } }
+    { query: { enabled: !!user?.userId, queryKey: getGetQuestionsQueryKey(queryParams) } },
   );
 
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
-  // Apply client-side filtering for "bids received" view
   const filtered = isBidsReceivedView
-    ? (allQuestions ?? []).filter(q => (q.status as any) === 'BidReceived' || q.status === 'Matched')
+    ? (allQuestions ?? []).filter((q) => (q.status as any) === 'BidReceived')
     : (allQuestions ?? []);
 
   const sorted = [...filtered].sort((a, b) =>
-    new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
+    new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime(),
   );
 
   const getTitle = () => {
     if (status === 'Open') return 'Open Questions';
-    if (isBidsReceivedView) return 'Bids Received';
-    if (status === 'BidReceived') return 'Bids Received';
+    if (isBidsReceivedView || status === 'BidReceived') return 'Bids Received';
     return 'My Questions';
   };
 
   const getEmptyDescription = () => {
     if (status === 'Open') return 'No open questions. Post a new question to get help.';
-    if (isBidsReceivedView) return 'No bids received yet. Tutors will bid soon!';
-    if (status === 'BidReceived') return 'No bids received yet. Tutors will bid soon!';
+    if (isBidsReceivedView || status === 'BidReceived') return 'No bids received yet. Tutors will bid soon!';
     return 'No questions posted yet.';
   };
 
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 20 }]}>
-        {[1, 2, 3].map(i => <Skeleton key={i} height={100} style={{ marginBottom: 12 }} />)}
+        {[1, 2, 3].map((i) => <Skeleton key={i} height={100} style={{ marginBottom: 12 }} />)}
       </View>
     );
   }
@@ -104,7 +86,7 @@ export default function StudentQuestionsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={sorted}
-        keyExtractor={q => String(q.questionId)}
+        keyExtractor={(q) => String(q.questionId)}
         contentContainerStyle={[styles.list, { paddingTop: 16, paddingBottom: insets.bottom + 100 }]}
         scrollEnabled={sorted.length > 0}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
@@ -118,7 +100,7 @@ export default function StudentQuestionsScreen() {
                 <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
                   {q.title}
                 </Text>
-                <Badge label={getStatusLabel(q.status)} variant="blue" />
+                <Badge label={getStatusLabel(q.status)} variant={statusVariant(q.status)} />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="book" size={13} color={colors.mutedForeground} />

@@ -23,9 +23,17 @@ import { useCallback } from "react";
 
 function statusVariant(status: string) {
   if (status === "Confirmed") return "success";
-  if (status === "PendingConfirmation") return "warning";
   if (status === "Completed") return "outline";
   return "destructive";
+}
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "Confirmed": return "Confirmed";
+    case "Completed": return "Completed";
+    case "Cancelled": return "Cancelled";
+    default: return status;
+  }
 }
 
 function formatSGT(dateStr: string | null | undefined) {
@@ -35,27 +43,6 @@ function formatSGT(dateStr: string | null | undefined) {
     dateStyle: "medium",
     timeStyle: "short",
   });
-}
-
-function getStatusLabel(status: string) {
-  switch (status) {
-    case "Open":
-      return "Open";
-    case "BidReceived":
-      return "Bid Received";
-    case "Matched":
-      return "Awaiting Schedule";
-    case "PendingConfirmation":
-      return "Pending Tutor Acceptance";
-    case "Scheduled":
-      return "Session Scheduled";
-    case "Completed":
-      return "Completed";
-    case "Cancelled":
-      return "Cancelled";
-    default:
-      return status;
-  }
 }
 
 export default function StudentCompletedScreen() {
@@ -84,8 +71,8 @@ export default function StudentCompletedScreen() {
   );
 
   const sorted = [...(sessions ?? [])].sort((a, b) => {
-    const ta = a.finalTime ?? a.proposedTime;
-    const tb = b.finalTime ?? b.proposedTime;
+    const ta = a.finalTime;
+    const tb = b.finalTime;
     if (!ta && !tb) return 0;
     if (!ta) return 1;
     if (!tb) return -1;
@@ -141,7 +128,7 @@ export default function StudentCompletedScreen() {
                 >
                   {s.question?.title ?? "Session"}
                 </Text>
-                <Badge label={getStatusLabel(s.status)} variant="blue" />
+                <Badge label={getStatusLabel(s.status)} variant={statusVariant(s.status)} />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="user" size={13} color={colors.mutedForeground} />
@@ -160,7 +147,7 @@ export default function StudentCompletedScreen() {
                 <Text
                   style={[styles.metaText, { color: colors.mutedForeground }]}
                 >
-                  {formatSGT(s.finalTime ?? s.proposedTime)}
+                  {formatSGT(s.finalTime)}
                 </Text>
               </View>
             </Card>

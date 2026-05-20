@@ -7,7 +7,7 @@ import {
   tutorProfilesTable,
   reviewsTable,
 } from "@workspace/db";
-import { and, avg, count, eq, or } from "drizzle-orm";
+import { and, avg, count, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { authMiddleware } from "../middlewares/auth";
 
@@ -29,7 +29,7 @@ router.get(
       return;
     }
 
-    // 1. Open Questions = "Open"
+    // 1. Open Questions
     const [openQuestionsCount] = await db
       .select({ value: count() })
       .from(questionsTable)
@@ -40,32 +40,18 @@ router.get(
         ),
       );
 
-    // 2. Bids Received = "BidReceived" OR "Matched" (student accepted but haven't proposed time)
+    // 2. Bids Received = questions with status "BidReceived"
     const [bidsReceivedCount] = await db
       .select({ value: count() })
       .from(questionsTable)
       .where(
         and(
           eq(questionsTable.studentId, studentId),
-          or(
-            eq(questionsTable.status, "BidReceived"),
-            eq(questionsTable.status, "Matched"),
-          ),
+          eq(questionsTable.status, "BidReceived"),
         ),
       );
 
-    // 3. Pending Tutors = "PendingConfirmation" (student proposed time, waiting for tutor)
-    const [pendingTutorsCount] = await db
-      .select({ value: count() })
-      .from(questionsTable)
-      .where(
-        and(
-          eq(questionsTable.studentId, studentId),
-          eq(questionsTable.status, "PendingConfirmation"),
-        ),
-      );
-
-    // 4. Upcoming Sessions = "Confirmed" (from sessionsTable)
+    // 3. Upcoming Sessions = Confirmed sessions
     const [studentUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -76,7 +62,7 @@ router.get(
         ),
       );
 
-    // 5. Completed Sessions
+    // 4. Completed Sessions
     const [studentCompletedSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -151,16 +137,10 @@ router.get(
       }),
     );
 
-    // DEBUG LOGS - Add this before res.json
-    console.log("=== BACKEND STUDENT DASHBOARD DEBUG ===");
-    console.log("bidsReceivedCount:", Number(bidsReceivedCount.value));
-    console.log("pendingTutorsCount:", Number(pendingTutorsCount.value));
-    console.log("openQuestionsCount:", Number(openQuestionsCount.value));
-    
     res.json({
       openQuestions: Number(openQuestionsCount.value),
       bidsReceived: Number(bidsReceivedCount.value),
-      pendingTutors: Number(pendingTutorsCount.value),
+      pendingTutors: 0,
       upcomingSessions: Number(studentUpcomingSessionsCount.value),
       completedSessions: Number(studentCompletedSessionsCount.value),
       totalSpent: 0,
@@ -185,37 +165,22 @@ router.get(
     const [tutorOpenBidsCount] = await db
       .select({ value: count() })
       .from(bidsTable)
-      .innerJoin(
-        questionsTable,
-        eq(bidsTable.questionId, questionsTable.questionId),
-      )
+      .innerJoin(questionsTable, eq(bidsTable.questionId, questionsTable.questionId))
       .where(
         and(
           eq(bidsTable.tutorId, tutorId),
           eq(bidsTable.status, "Pending"),
-          or(
-            eq(questionsTable.status, "Open"),
-            eq(questionsTable.status, "BidReceived"),
-          ),
         ),
       );
 
-    // 2. Accepted Bids = Accepted bids on Matched or PendingConfirmation questions
+    // 2. Accepted Bids = bids with Accepted status (session confirmed)
     const [tutorAcceptedBidsCount] = await db
       .select({ value: count() })
       .from(bidsTable)
-      .innerJoin(
-        questionsTable,
-        eq(bidsTable.questionId, questionsTable.questionId),
-      )
       .where(
         and(
           eq(bidsTable.tutorId, tutorId),
           eq(bidsTable.status, "Accepted"),
-          or(
-            eq(questionsTable.status, "Matched"),
-            eq(questionsTable.status, "PendingConfirmation"),
-          ),
         ),
       );
 

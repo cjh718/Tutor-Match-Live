@@ -4,6 +4,7 @@ import {
   tutorProfilesTable,
   usersTable,
   questionsTable,
+  sessionsTable,
 } from "@workspace/db";
 import { and, eq, SQL } from "drizzle-orm";
 import { Router, type IRouter } from "express";
@@ -66,14 +67,21 @@ router.post("/bids", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  const { questionId, price, message } = req.body as {
+  const { questionId, price, message, offerNow, specificTime } = req.body as {
     questionId?: number;
     price?: number;
     message?: string;
+    offerNow?: boolean;
+    specificTime?: string;
   };
 
   if (!questionId || !price || !message) {
     res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  if (!offerNow && !specificTime) {
+    res.status(400).json({ error: "At least one scheduling option is required (NOW or specific time)" });
     return;
   }
 
@@ -87,11 +95,14 @@ router.post("/bids", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  // Allow bids on "Open" or "BidReceived"
   if (question.status !== "Open" && question.status !== "BidReceived") {
     res.status(400).json({ error: "Question is no longer open for bids" });
     return;
   }
+
+  const windowExpiresAt = offerNow
+    ? new Date(Date.now() + 10 * 60 * 1000)
+    : null;
 
   const [bid] = await db
     .insert(bidsTable)
@@ -100,10 +111,12 @@ router.post("/bids", authMiddleware, async (req, res): Promise<void> => {
       tutorId: req.user!.userId,
       price,
       message,
+      offerNow: !!offerNow,
+      windowExpiresAt: windowExpiresAt ?? undefined,
+      specificTime: specificTime ? new Date(specificTime) : undefined,
     })
     .returning();
 
-  // If status was "Open", change to "BidReceived"
   if (question.status === "Open") {
     await db
       .update(questionsTable)
@@ -164,7 +177,11 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  const { status } = req.body as { status?: string };
+  const { status, selectedTime } = req.body as {
+    status?: string;
+    selectedTime?: "now" | "specific";
+  };
+
   if (!status || !["Pending", "Accepted", "Rejected", "Withdrawn"].includes(status)) {
     res.status(400).json({ error: "Invalid status" });
     return;
@@ -177,10 +194,17 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
 
   if (status === "Accepted") {
     if (question.studentId !== req.user!.userId) {
-      res
-        .status(403)
-        .json({ error: "Only the student who posted can accept bids" });
+      res.status(403).json({ error: "Only the student who posted can accept bids" });
       return;
+    }
+
+    // Determine the final confirmed time
+    let finalTime: Date;
+    if (selectedTime === "specific" && existing.specificTime) {
+      finalTime = new Date(existing.specificTime);
+    } else {
+      // "now" or fallback
+      finalTime = new Date();
     }
 
     // Reject all other pending bids for this question
@@ -194,10 +218,18 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
         ),
       );
 
-    // Update question status to "Matched"
+    // Auto-create session as Confirmed
+    await db.insert(sessionsTable).values({
+      questionId: existing.questionId,
+      studentId: question.studentId,
+      tutorId: existing.tutorId,
+      finalTime,
+    });
+
+    // Update question to Scheduled
     await db
       .update(questionsTable)
-      .set({ status: "Matched" })
+      .set({ status: "Scheduled" })
       .where(eq(questionsTable.questionId, existing.questionId));
 
     const [student] = await db
@@ -205,11 +237,15 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
       .from(usersTable)
       .where(eq(usersTable.userId, question.studentId));
 
+    const timeLabel = selectedTime === "specific" && existing.specificTime
+      ? new Date(existing.specificTime).toLocaleString("en-SG", { timeZone: "Asia/Singapore" })
+      : "Now";
+
     await notify({
       userId: existing.tutorId,
       type: "bid_accepted",
       title: "Your bid was accepted",
-      message: `${student.name} accepted your bid on "${question.title}"`,
+      message: `${student.name} accepted your bid on "${question.title}" — session time: ${timeLabel}`,
       relatedId: bidId,
     });
   }

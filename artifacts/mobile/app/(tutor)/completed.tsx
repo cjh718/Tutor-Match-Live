@@ -22,8 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCallback } from "react";
 
 function statusVariant(status: string) {
-  if (status === "Scheduled") return "success";
-  if (status === "PendingConfirmation") return "warning";
+  if (status === "Confirmed") return "success";
   if (status === "Completed") return "outline";
   return "destructive";
 }
@@ -35,27 +34,6 @@ function formatSGT(dateStr: string | null | undefined) {
     dateStyle: "medium",
     timeStyle: "short",
   });
-}
-
-function getStatusLabel(status: string) {
-  switch (status) {
-    case "Open":
-      return "Open";
-    case "BidReceived":
-      return "Bidded";
-    case "Matched":
-      return "Awaiting Schedule";
-    case "PendingConfirmation":
-      return "Pending Tutor Acceptance";
-    case "Scheduled":
-      return "Session Scheduled";
-    case "Completed":
-      return "Completed";
-    case "Cancelled":
-      return "Cancelled";
-    default:
-      return status;
-  }
 }
 
 export default function TutorCompletedScreen() {
@@ -84,8 +62,8 @@ export default function TutorCompletedScreen() {
   );
 
   const sorted = [...(sessions ?? [])].sort((a, b) => {
-    const ta = a.finalTime ?? a.proposedTime;
-    const tb = b.finalTime ?? b.proposedTime;
+    const ta = a.finalTime;
+    const tb = b.finalTime;
     if (!ta && !tb) return 0;
     if (!ta) return 1;
     if (!tb) return -1;
@@ -141,10 +119,7 @@ export default function TutorCompletedScreen() {
                 >
                   {s.question?.title ?? "Session"}
                 </Text>
-                <Badge
-                  label={getStatusLabel(s.question?.status || s.status)}
-                  variant={statusVariant(s.status)}
-                />
+                <Badge label={s.status} variant={statusVariant(s.status)} />
               </View>
               <View style={styles.metaRow}>
                 <Feather name="user" size={13} color={colors.mutedForeground} />
@@ -163,7 +138,7 @@ export default function TutorCompletedScreen() {
                 <Text
                   style={[styles.metaText, { color: colors.mutedForeground }]}
                 >
-                  {formatSGT(s.finalTime ?? s.proposedTime)}
+                  {formatSGT(s.finalTime)}
                 </Text>
               </View>
             </Card>
