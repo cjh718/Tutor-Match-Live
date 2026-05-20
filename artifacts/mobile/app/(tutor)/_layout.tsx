@@ -75,7 +75,7 @@ export default function TutorTabLayout() {
         name="accepted-bids"
         options={{
           href: null,
-          title: "Accepted Bids111",
+          title: "Accepted Bids",
           headerShown: true,
         }}
       />
