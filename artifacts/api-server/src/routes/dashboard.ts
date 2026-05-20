@@ -184,14 +184,14 @@ router.get(
         ),
       );
 
-    // 3. Upcoming Sessions = Confirmed sessions
+    // 3. Upcoming Sessions = Scheduled sessions
     const [tutorUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
       .where(
         and(
           eq(sessionsTable.tutorId, tutorId),
-          eq(sessionsTable.status, "Confirmed"),
+          eq(sessionsTable.status, "Scheduled"),
         ),
       );
 
