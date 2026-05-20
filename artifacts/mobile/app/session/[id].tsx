@@ -131,11 +131,17 @@ export default function SessionDetailScreen() {
         data: { tutorCounterTime: counterDateTime.toISOString() } 
       });
 
+      // Change question status back to "Matched" - student needs to act
+      await fetch(`/api/questions/${session?.questionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: "Matched" })
+      });
+
       await queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey(sessionId) });
       setShowCounter(false);
 
-      // Navigate back to tutor dashboard after countering
-      Alert.alert('Success', 'Counter time proposed to student.', [
+      Alert.alert('Success', 'Counter time proposed. Student will review it.', [
         { text: 'OK', onPress: () => router.push('/(tutor)') }
       ]);
     } catch {
@@ -234,7 +240,17 @@ export default function SessionDetailScreen() {
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>
             {session.question?.title ?? 'Session'}
           </Text>
-          <Badge label={session.status} variant={statusVariant(session.status)} />
+          <Badge 
+            label={
+              // Tutor countered, waiting for student (question status is "Matched")
+              session.question?.status === "Matched" 
+                ? (isStudent ? "Awaiting Your Response" : "Awaiting Student Response")
+                : session.status === "PendingConfirmation" 
+                  ? "Pending Tutor Acceptance" 
+                  : session.status
+            } 
+            variant={statusVariant(session.status)} 
+          />
         </View>
         <View style={styles.infoRow}>
           <Feather name="user" size={14} color={colors.mutedForeground} />

@@ -92,9 +92,10 @@ export default function TutorTabLayout() {
       <Tabs.Screen
         name="completed"
         options={{
-          href: null,
           title: "Completed",
-          headerShown: true,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="check-circle" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
