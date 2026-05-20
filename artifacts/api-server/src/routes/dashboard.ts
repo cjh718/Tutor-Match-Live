@@ -7,7 +7,7 @@ import {
   tutorProfilesTable,
   reviewsTable,
 } from "@workspace/db";
-import { and, avg, count, eq } from "drizzle-orm";
+import { and, avg, count, eq, isNull, isNotNull } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { authMiddleware } from "../middlewares/auth";
 
@@ -51,7 +51,7 @@ router.get(
         ),
       );
 
-    // 3. Upcoming Sessions = Confirmed sessions
+    // 3. Pending Tutor = Confirmed sessions without a meeting link
     const [studentUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -59,6 +59,7 @@ router.get(
         and(
           eq(sessionsTable.studentId, studentId),
           eq(sessionsTable.status, "Confirmed"),
+          isNull(sessionsTable.meetingLink),
         ),
       );
 
@@ -100,7 +101,7 @@ router.get(
       }),
     );
 
-    // Upcoming Sessions List (for display)
+    // Pending Tutor List (for display)
     const upcomingSessionsList = await db
       .select()
       .from(sessionsTable)
@@ -108,6 +109,7 @@ router.get(
         and(
           eq(sessionsTable.studentId, studentId),
           eq(sessionsTable.status, "Confirmed"),
+          isNull(sessionsTable.meetingLink),
         ),
       )
       .limit(5);
@@ -191,7 +193,7 @@ router.get(
       .where(
         and(
           eq(sessionsTable.tutorId, tutorId),
-          eq(sessionsTable.status, "Scheduled"),
+          eq(sessionsTable.status, "Confirmed"),
         ),
       );
 
@@ -263,6 +265,7 @@ router.get(
         and(
           eq(sessionsTable.tutorId, tutorId),
           eq(sessionsTable.status, "Confirmed"),
+          isNotNull(sessionsTable.meetingLink),
         ),
       )
       .limit(5);
