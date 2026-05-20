@@ -10,6 +10,7 @@ export const usersTable = pgTable("users", {
   role: text("role", { enum: ["student", "tutor", "admin"] }).notNull(),
   rating: real("rating"),
   suspended: boolean("suspended").notNull().default(false),
+  pushToken: text("push_token"),
   createdDate: timestamp("created_date", { withTimezone: true }).notNull().defaultNow(),
 });
 

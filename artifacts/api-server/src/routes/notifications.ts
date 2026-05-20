@@ -1,4 +1,4 @@
-import { db, notificationsTable } from "@workspace/db";
+import { db, notificationsTable, usersTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { authMiddleware } from "../middlewares/auth";
@@ -51,6 +51,21 @@ router.put("/notifications/read-all", authMiddleware, async (req, res): Promise<
     .update(notificationsTable)
     .set({ read: true })
     .where(eq(notificationsTable.userId, req.user!.userId));
+
+  res.json({ success: true });
+});
+
+router.post("/notifications/push-token", authMiddleware, async (req, res): Promise<void> => {
+  const { token } = req.body as { token?: string };
+  if (!token || typeof token !== "string") {
+    res.status(400).json({ error: "token is required" });
+    return;
+  }
+
+  await db
+    .update(usersTable)
+    .set({ pushToken: token })
+    .where(eq(usersTable.userId, req.user!.userId));
 
   res.json({ success: true });
 });
