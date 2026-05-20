@@ -71,7 +71,7 @@ PORT = "8081"
 BASE_PATH = "/__mockup"
 
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]
