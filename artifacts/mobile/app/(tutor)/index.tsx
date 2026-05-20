@@ -40,7 +40,7 @@ export default function TutorDashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   if (isLoading) {
@@ -89,10 +89,11 @@ export default function TutorDashboardScreen() {
               <Text style={[styles.statValue, { color: colors.foreground }]}>
                 {dashboard?.openBids || 0}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                Open Bids{'\n'}(Bids you've placed)
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                Open Bids{"\n"}(Bids you've placed)
               </Text>
-              
             </Card>
           </Pressable>
 
@@ -106,8 +107,10 @@ export default function TutorDashboardScreen() {
               <Text style={[styles.statValue, { color: colors.foreground }]}>
                 {dashboard?.acceptedBids || 0}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                Accepted Bids{'\n'}(Accepted by students)
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                Accepted Bids{"\n"}(Accepted by students)
               </Text>
             </Card>
           </Pressable>
@@ -125,8 +128,10 @@ export default function TutorDashboardScreen() {
               <Text style={[styles.statValue, { color: colors.foreground }]}>
                 {dashboard?.upcomingSessions || 0}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                Upcoming Sessions{'\n'}(Scheduled Session)
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                Upcoming Sessions{"\n"}(Scheduled Session)
               </Text>
             </Card>
           </Pressable>
@@ -141,8 +146,10 @@ export default function TutorDashboardScreen() {
               <Text style={[styles.statValue, { color: colors.foreground }]}>
                 {dashboard?.completedSessions || 0}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                Completed{'\n'}(Finished sessions)
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                Completed{"\n"}(Finished sessions)
               </Text>
             </Card>
           </Pressable>
@@ -165,22 +172,19 @@ export default function TutorDashboardScreen() {
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
         Recent Bids
       </Text>
-      {dashboard?.recentBids?.length === 0 ? (
-        <Text style={{ color: colors.mutedForeground }}>No recent bids.</Text>
-      ) : (
-        dashboard?.recentBids?.map((bid) => (
-          <Link key={bid.bidId} href={`/question/${bid.questionId}`} asChild>
-            <Card style={styles.itemCard}>
-              <Text style={[styles.itemTitle, { color: colors.foreground }]}>
-                SGD {bid.price} - {bid.status}
-              </Text>
-              <Text style={{ color: colors.mutedForeground }}>
-                {bid.message}
-              </Text>
-            </Card>
-          </Link>
-        ))
-      )}
+      {dashboard?.recentBids?.map((bid) => (
+        <Pressable
+          key={bid.bidId}
+          onPress={() => router.push(`/question/${bid.questionId}`)}
+        >
+          <Card style={styles.itemCard}>
+            <Text style={[styles.itemTitle, { color: colors.foreground }]}>
+              SGD {bid.price} - {bid.status}
+            </Text>
+            <Text style={{ color: colors.mutedForeground }}>{bid.message}</Text>
+          </Card>
+        </Pressable>
+      ))}
     </ScrollView>
   );
 }

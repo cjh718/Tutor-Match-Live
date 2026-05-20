@@ -47,14 +47,18 @@ export default function TutorTabLayout() {
         name="index"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="home" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="browse"
         options={{
           title: "Browse",
-          tabBarIcon: ({ color, size }) => <Feather name="search" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="search" size={size} color={color} />
+          ),
         }}
       />
       {/* HIDE my-bids tab */}
@@ -71,7 +75,7 @@ export default function TutorTabLayout() {
         name="accepted-bids"
         options={{
           href: null,
-          title: "Accepted Bids",
+          title: "Accepted Bids111",
           headerShown: true,
         }}
       />
@@ -97,7 +101,9 @@ export default function TutorTabLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => <Feather name="user" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="user" size={size} color={color} />
+          ),
         }}
       />
     </Tabs>
