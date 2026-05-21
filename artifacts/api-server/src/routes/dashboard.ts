@@ -51,7 +51,7 @@ router.get(
         ),
       );
 
-    // 3. Pending Tutor = Confirmed sessions without a meeting link
+    // 3. Upcoming Sessions = Confirmed sessions (with or without meeting link)
     const [studentUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -59,11 +59,22 @@ router.get(
         and(
           eq(sessionsTable.studentId, studentId),
           eq(sessionsTable.status, "Confirmed"),
-          isNull(sessionsTable.meetingLink),
+          //isNull(sessionsTable.meetingLink),
         ),
       );
 
-    // 4. Completed Sessions
+    // 4. Pending Tutor = sessions waiting for tutor (PendingConfirmation status)
+    const [pendingTutorCount] = await db
+      .select({ value: count() })
+      .from(sessionsTable)
+      .where(
+        and(
+          eq(sessionsTable.studentId, studentId),
+          eq(sessionsTable.status, "PendingConfirmation"),
+        ),
+      );
+    
+    // 5. Completed Sessions
     const [studentCompletedSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -142,10 +153,10 @@ router.get(
     res.json({
       openQuestions: Number(openQuestionsCount.value),
       bidsReceived: Number(bidsReceivedCount.value),
-      pendingTutors: 0,
+      pendingTutors: Number(pendingTutorCount.value), 
       upcomingSessions: Number(studentUpcomingSessionsCount.value),
       completedSessions: Number(studentCompletedSessionsCount.value),
-      totalSpent: 0,
+      //totalSpent: 0,
       recentQuestions: recentWithStudents,
       upcomingSessionsList: upcomingEnriched,
     });
