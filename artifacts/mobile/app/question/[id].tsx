@@ -393,12 +393,6 @@ export default function QuestionDetailScreen() {
           {question.description}
         </Text>
         <View style={styles.qMeta}>
-          <View style={styles.metaItem}>
-            <Feather name="clock" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
-              {question.preferredDuration} min
-            </Text>
-          </View>
           {question.optionalBudget != null && (
             <View style={styles.metaItem}>
               <Feather
