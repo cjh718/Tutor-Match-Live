@@ -218,18 +218,19 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
         ),
       );
 
-    // Auto-create session as Confirmed
+    // Auto-create session as Matched
     await db.insert(sessionsTable).values({
       questionId: existing.questionId,
       studentId: question.studentId,
       tutorId: existing.tutorId,
       finalTime,
+      status: "Matched",  
     });
 
-    // Update question to Scheduled
+    // Update question to Matched
     await db
       .update(questionsTable)
-      .set({ status: "Scheduled" })
+      .set({ status: "Matched" })
       .where(eq(questionsTable.questionId, existing.questionId));
 
     const [student] = await db

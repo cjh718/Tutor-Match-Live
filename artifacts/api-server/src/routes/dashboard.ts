@@ -51,7 +51,18 @@ router.get(
         ),
       );
 
-    // 3. Upcoming Sessions = Confirmed sessions (with or without meeting link)
+    // 3. Pending Tutor = sessions with status "Matched" (waiting for tutor to add meeting link)
+    const [pendingTutorCount] = await db
+      .select({ value: count() })
+      .from(sessionsTable)
+      .where(
+        and(
+          eq(sessionsTable.studentId, studentId),
+          eq(sessionsTable.status, "Matched"),
+        ),
+      );
+
+    // 4. Upcoming Sessions = sessions with status "Confirmed" (tutor added meeting link)
     const [studentUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -59,21 +70,9 @@ router.get(
         and(
           eq(sessionsTable.studentId, studentId),
           eq(sessionsTable.status, "Confirmed"),
-          //isNull(sessionsTable.meetingLink),
         ),
       );
 
-    // 4. Pending Tutor = sessions waiting for tutor (PendingConfirmation status)
-    const [pendingTutorCount] = await db
-      .select({ value: count() })
-      .from(sessionsTable)
-      .where(
-        and(
-          eq(sessionsTable.studentId, studentId),
-          eq(sessionsTable.status, "PendingConfirmation"),
-        ),
-      );
-    
     // 5. Completed Sessions
     const [studentCompletedSessionsCount] = await db
       .select({ value: count() })
@@ -112,7 +111,44 @@ router.get(
       }),
     );
 
-    // Pending Tutor List (for display)
+    // Pending Tutor List (sessions waiting for tutor)
+    const pendingTutorList = await db
+      .select()
+      .from(sessionsTable)
+      .where(
+        and(
+          eq(sessionsTable.studentId, studentId),
+          eq(sessionsTable.status, "Matched"),
+        ),
+      )
+      .limit(5);
+
+    const pendingTutorEnriched = await Promise.all(
+      pendingTutorList.map(async (s) => {
+        const [student] = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.userId, s.studentId));
+        const [tutor] = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.userId, s.tutorId));
+        const [question] = await db
+          .select()
+          .from(questionsTable)
+          .where(eq(questionsTable.questionId, s.questionId));
+        const { password: _s, ...studentWithoutPassword } = student;
+        const { password: _t, ...tutorWithoutPassword } = tutor;
+        return {
+          ...s,
+          student: studentWithoutPassword,
+          tutor: tutorWithoutPassword,
+          question,
+        };
+      }),
+    );
+
+    // Upcoming Sessions List (confirmed sessions)
     const upcomingSessionsList = await db
       .select()
       .from(sessionsTable)
@@ -120,7 +156,6 @@ router.get(
         and(
           eq(sessionsTable.studentId, studentId),
           eq(sessionsTable.status, "Confirmed"),
-          isNull(sessionsTable.meetingLink),
         ),
       )
       .limit(5);
@@ -153,11 +188,11 @@ router.get(
     res.json({
       openQuestions: Number(openQuestionsCount.value),
       bidsReceived: Number(bidsReceivedCount.value),
-      pendingTutors: Number(pendingTutorCount.value), 
+      pendingTutors: Number(pendingTutorCount.value),
       upcomingSessions: Number(studentUpcomingSessionsCount.value),
       completedSessions: Number(studentCompletedSessionsCount.value),
-      //totalSpent: 0,
       recentQuestions: recentWithStudents,
+      pendingTutorList: pendingTutorEnriched,
       upcomingSessionsList: upcomingEnriched,
     });
   },
@@ -186,18 +221,18 @@ router.get(
         ),
       );
 
-    // 2. Accepted Bids = bids with Accepted status (session confirmed)
+    // 2. Accepted Bids = sessions with status "Matched" (waiting for tutor to add meeting link)
     const [tutorAcceptedBidsCount] = await db
       .select({ value: count() })
-      .from(bidsTable)
+      .from(sessionsTable)
       .where(
         and(
-          eq(bidsTable.tutorId, tutorId),
-          eq(bidsTable.status, "Accepted"),
+          eq(sessionsTable.tutorId, tutorId),
+          eq(sessionsTable.status, "Matched"),
         ),
       );
 
-    // 3. Upcoming Sessions = Scheduled sessions
+    // 3. Upcoming Sessions = sessions with status "Confirmed" (tutor added meeting link)
     const [tutorUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -268,6 +303,43 @@ router.get(
       }),
     );
 
+    // Accepted Bids List (sessions waiting for tutor)
+    const acceptedBidsList = await db
+      .select()
+      .from(sessionsTable)
+      .where(
+        and(
+          eq(sessionsTable.tutorId, tutorId),
+          eq(sessionsTable.status, "Matched"),
+        ),
+      )
+      .limit(5);
+
+    const acceptedBidsEnriched = await Promise.all(
+      acceptedBidsList.map(async (s) => {
+        const [student] = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.userId, s.studentId));
+        const [tutor] = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.userId, s.tutorId));
+        const [question] = await db
+          .select()
+          .from(questionsTable)
+          .where(eq(questionsTable.questionId, s.questionId));
+        const { password: _s, ...studentWithoutPassword } = student;
+        const { password: _t, ...tutorWithoutPassword } = tutor;
+        return {
+          ...s,
+          student: studentWithoutPassword,
+          tutor: tutorWithoutPassword,
+          question,
+        };
+      }),
+    );
+
     // Upcoming sessions list (for display)
     const upcomingSessionsList = await db
       .select()
@@ -276,7 +348,6 @@ router.get(
         and(
           eq(sessionsTable.tutorId, tutorId),
           eq(sessionsTable.status, "Confirmed"),
-          isNotNull(sessionsTable.meetingLink),
         ),
       )
       .limit(5);
@@ -316,6 +387,7 @@ router.get(
         ? parseFloat(parseFloat(avgRating).toFixed(2))
         : 0,
       recentBids: recentBidsEnriched,
+      acceptedBidsList: acceptedBidsEnriched,
       upcomingSessionsList: upcomingEnriched,
     });
   },

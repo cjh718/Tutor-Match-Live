@@ -59,7 +59,7 @@ router.get("/sessions", authMiddleware, async (req, res): Promise<void> => {
     conditions.push(eq(sessionsTable.questionId, parseInt(questionId, 10)));
   if (status) {
     conditions.push(
-      eq(sessionsTable.status, status as "Confirmed" | "Completed" | "Cancelled"),
+      eq(sessionsTable.status, status as "Matched" | "Confirmed" | "Completed" | "Cancelled"),
     );
   }
 
@@ -135,7 +135,7 @@ router.put(
     const updates: Partial<typeof sessionsTable.$inferInsert> = {};
     if (meetingLink !== undefined) updates.meetingLink = meetingLink;
     if (status !== undefined) {
-      updates.status = status as "Confirmed" | "Completed" | "Cancelled";
+      updates.status = status as "Matched" | "Confirmed" | "Completed" | "Cancelled";
     }
 
     const [session] = await db
@@ -157,7 +157,20 @@ router.put(
       .from(questionsTable)
       .where(eq(questionsTable.questionId, session.questionId));
 
+    // When tutor adds a meeting link, update session to "Confirmed" and question to "Scheduled"
     if (meetingLink) {
+      // Update session status to "Confirmed"
+      await db
+        .update(sessionsTable)
+        .set({ status: "Confirmed" })
+        .where(eq(sessionsTable.sessionId, sessionId));
+
+      // Update question status to "Scheduled"
+      await db
+        .update(questionsTable)
+        .set({ status: "Scheduled" })
+        .where(eq(questionsTable.questionId, session.questionId));
+
       await notify({
         userId: session.studentId,
         type: "meeting_link_added",
@@ -189,7 +202,13 @@ router.put(
         .where(eq(questionsTable.questionId, session.questionId));
     }
 
-    const enriched = await enrichSession(session);
+    // Get the updated session with new status
+    const [updatedSession] = await db
+      .select()
+      .from(sessionsTable)
+      .where(eq(sessionsTable.sessionId, sessionId));
+
+    const enriched = await enrichSession(updatedSession);
     res.json(enriched);
   },
 );

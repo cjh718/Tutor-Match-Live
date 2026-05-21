@@ -1,21 +1,40 @@
 import { useEffect, useRef } from 'react';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { customFetch } from '@workspace/api-client-react';
 
-if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
+// Only import expo-notifications if not in Expo Go and not on web
+let Notifications: any = null;
+let isExpoGo = false;
+
+try {
+  // Check if running in Expo Go
+  const Constants = require('expo-constants');
+  if (Constants.default && Constants.default.executionEnvironment === 'storeClient') {
+    isExpoGo = true;
+  }
+} catch (e) {
+  // Ignore
+}
+
+if (!isExpoGo && Platform.OS !== 'web') {
+  try {
+    Notifications = require('expo-notifications');
+
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  } catch (e) {
+    console.warn('expo-notifications not available:', e);
+  }
 }
 
 async function registerForPushNotifications(): Promise<string | null> {
-  if (Platform.OS === 'web') return null;
+  if (Platform.OS === 'web' || isExpoGo || !Notifications) return null;
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -36,7 +55,7 @@ export function usePushNotifications() {
   const registeredRef = useRef(false);
 
   useEffect(() => {
-    if (!user || registeredRef.current) return;
+    if (!user || registeredRef.current || isExpoGo) return;
 
     registerForPushNotifications()
       .then(async (token) => {
