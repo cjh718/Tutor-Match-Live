@@ -29,6 +29,7 @@ function formatSGT(dateStr: string | null | undefined) {
 function statusVariant(status: string) {
   if (status === 'Confirmed') return 'success';
   if (status === 'Completed') return 'outline';
+  if (status === 'Matched') return 'success';
   return 'destructive';
 }
 
@@ -250,7 +251,7 @@ export default function SessionDetailScreen() {
       </Card>
 
       {/* Tutor: add meeting link */}
-      {isTutor && session.status === 'Confirmed' && !session.meetingLink && (
+      {isTutor && session.status === 'Matched' && !session.meetingLink && (
         <Card style={styles.actionCard}>
           <Text style={[styles.actionTitle, { color: colors.foreground }]}>
             Add Meeting Link

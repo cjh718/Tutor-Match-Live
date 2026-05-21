@@ -157,6 +157,7 @@ router.get(
         and(
           eq(sessionsTable.studentId, studentId),
           eq(sessionsTable.status, "Confirmed"),
+          isNotNull(sessionsTable.meetingLink),  
         ),
       )
       .limit(5);
@@ -350,6 +351,7 @@ router.get(
         and(
           eq(sessionsTable.tutorId, tutorId),
           eq(sessionsTable.status, "Confirmed"),
+          isNotNull(sessionsTable.meetingLink),
         ),
       )
       .limit(5);
