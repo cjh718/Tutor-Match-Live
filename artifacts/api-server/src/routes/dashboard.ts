@@ -62,7 +62,7 @@ router.get(
         ),
       );
 
-    // 4. Upcoming Sessions = sessions with status "Confirmed" (tutor added meeting link)
+    // 4. Upcoming Sessions = sessions with status "Confirmed" AND meeting link exists
     const [studentUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -70,6 +70,7 @@ router.get(
         and(
           eq(sessionsTable.studentId, studentId),
           eq(sessionsTable.status, "Confirmed"),
+          isNotNull(sessionsTable.meetingLink),  // ← Add this
         ),
       );
 
@@ -232,7 +233,7 @@ router.get(
         ),
       );
 
-    // 3. Upcoming Sessions = sessions with status "Confirmed" (tutor added meeting link)
+    // 3. Upcoming Sessions = sessions with status "Confirmed" AND meeting link exists
     const [tutorUpcomingSessionsCount] = await db
       .select({ value: count() })
       .from(sessionsTable)
@@ -240,6 +241,7 @@ router.get(
         and(
           eq(sessionsTable.tutorId, tutorId),
           eq(sessionsTable.status, "Confirmed"),
+          isNotNull(sessionsTable.meetingLink),
         ),
       );
 
