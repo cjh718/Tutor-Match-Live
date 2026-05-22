@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { Feather } from "@expo/vector-icons";
+import { getBaseUrl } from '@workspace/api-client-react';
 
 export default function PostQuestionScreen() {
   const colors = useColors();
@@ -73,7 +74,7 @@ export default function PostQuestionScreen() {
         type: attachment.type,
       } as any);
 
-      const response = await fetch("/api/upload", {
+      const response = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/upload`, {
         method: "POST",
         body: formData,
       });
