@@ -18,7 +18,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { Feather } from "@expo/vector-icons";
-import { getBaseUrl } from '@workspace/api-client-react';
 
 export default function PostQuestionScreen() {
   const colors = useColors();

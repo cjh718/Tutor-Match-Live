@@ -25,6 +25,6 @@ router.use(reviewsRouter);
 router.use(notificationsRouter);
 router.use(dashboardRouter);
 router.use(adminRouter);
-router.use(uploadRouter);  
+router.use(uploadRouter);
 
-export default router;import uploadRouter from "./upload";
+export default router;

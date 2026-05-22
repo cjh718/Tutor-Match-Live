@@ -880,11 +880,9 @@ components:
           type: string
         attachmentUrl:
           type: string
-        preferredDuration:
-          type: integer
         optionalBudget:
           type: number
-      required: [title, description, subject, preferredDuration]
+      required: [title, description, subject]
 
     UpdateQuestionRequest:
       type: object
@@ -895,8 +893,6 @@ components:
           type: string
         subject:
           type: string
-        preferredDuration:
-          type: integer
         optionalBudget:
           type: number
           nullable: true
