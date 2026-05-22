@@ -10,6 +10,7 @@ import reviewsRouter from "./reviews";
 import notificationsRouter from "./notifications";
 import dashboardRouter from "./dashboard";
 import adminRouter from "./admin";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(reviewsRouter);
 router.use(notificationsRouter);
 router.use(dashboardRouter);
 router.use(adminRouter);
+router.use(uploadRouter);  
 
 export default router;import uploadRouter from "./upload";

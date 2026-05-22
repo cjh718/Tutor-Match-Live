@@ -75,9 +75,6 @@ export default function PostQuestionScreen() {
 
       const response = await fetch("/api/upload", {
         method: "POST",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
         body: formData,
       });
 

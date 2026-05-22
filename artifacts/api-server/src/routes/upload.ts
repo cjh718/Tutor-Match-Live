@@ -38,3 +38,5 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res): 
     res.status(500).json({ error: "Failed to upload file" });
   }
 });
+
+export default router;
