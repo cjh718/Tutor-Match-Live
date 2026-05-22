@@ -5,6 +5,7 @@ import {
   View,
   Alert,
   Platform,
+  Pressable,
 } from "react-native";
 import { router } from "expo-router";
 import { useCreateQuestion } from "@workspace/api-client-react";
@@ -14,6 +15,9 @@ import { Input } from "@/components/ui/Input";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+import { Feather } from "@expo/vector-icons";
 
 export default function PostQuestionScreen() {
   const colors = useColors();
@@ -25,6 +29,8 @@ export default function PostQuestionScreen() {
   const [description, setDescription] = useState("");
   const [subject, setSubject] = useState("");
   const [budget, setBudget] = useState("");
+  const [attachment, setAttachment] = useState<{ uri: string; name: string; type: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
@@ -35,6 +41,66 @@ export default function PostQuestionScreen() {
     return e;
   };
 
+  const pickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "image/*", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        setAttachment({
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType || "application/octet-stream",
+        });
+      }
+    } catch (error) {
+      console.error("File pick error:", error);
+    }
+  };
+
+  const uploadFile = async (): Promise<string | undefined> => {
+    if (!attachment) return undefined;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", {
+        uri: attachment.uri,
+        name: attachment.name,
+        type: attachment.type,
+      } as any);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        return data.url;
+      } else {
+        Alert.alert("Error", "Failed to upload file");
+        return undefined;
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      Alert.alert("Error", "Failed to upload file");
+      return undefined;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
+  };
+
   const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length > 0) {
@@ -42,6 +108,8 @@ export default function PostQuestionScreen() {
       return;
     }
     try {
+      const attachmentUrl = await uploadFile();
+
       await createQuestion.mutateAsync({
         data: {
           title: title.trim(),
@@ -49,6 +117,7 @@ export default function PostQuestionScreen() {
           subject: subject.trim(),
           preferredDuration: 60,
           optionalBudget: budget ? parseFloat(budget) : undefined,
+          attachmentUrl,
         },
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
@@ -122,11 +191,40 @@ export default function PostQuestionScreen() {
         keyboardType="decimal-pad"
       />
 
+      {/* File Attachment Section */}
+      <View style={styles.attachmentSection}>
+        <Text style={[styles.attachmentLabel, { color: colors.foreground }]}>
+          Attachment (Optional)
+        </Text>
+
+        {!attachment ? (
+          <Pressable
+            style={[styles.attachButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+            onPress={pickFile}
+          >
+            <Feather name="paperclip" size={20} color={colors.primary} />
+            <Text style={[styles.attachButtonText, { color: colors.primary }]}>
+              Attach File (PDF, Image, Word)
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={[styles.attachedFile, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name="file" size={20} color={colors.success} />
+            <Text style={[styles.fileName, { color: colors.foreground }]} numberOfLines={1}>
+              {attachment.name}
+            </Text>
+            <Pressable onPress={removeAttachment}>
+              <Feather name="x" size={20} color={colors.destructive} />
+            </Pressable>
+          </View>
+        )}
+      </View>
+
       <Button
         title="Post Question"
         variant="primary"
         onPress={handleSubmit}
-        loading={createQuestion.isPending}
+        loading={createQuestion.isPending || uploading}
         style={{ marginTop: 8 }}
         size="lg"
       />
@@ -139,4 +237,27 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20 },
   heading: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
   subheading: { fontSize: 14, lineHeight: 20, marginBottom: 4 },
+  attachmentSection: { marginTop: 16, marginBottom: 8 },
+  attachmentLabel: { fontSize: 14, fontWeight: "500", marginBottom: 8 },
+  attachButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  attachButtonText: { fontSize: 14, fontWeight: "500" },
+  attachedFile: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  fileName: { flex: 1, fontSize: 13 },
 });

@@ -57,6 +57,10 @@
   },
   "dependencies": {
     "@react-native-community/datetimepicker": "^8.4.4",
-    "expo-notifications": "^0.32.17"
+    "@types/multer": "^2.1.0",
+    "expo-document-picker": "^56.0.3",
+    "expo-file-system": "^56.0.7",
+    "expo-notifications": "^0.32.17",
+    "multer": "^2.1.1"
   }
 }

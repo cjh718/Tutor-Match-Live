@@ -136,7 +136,7 @@ export default function StudentDashboardScreen() {
 
           {/* Pending Tutors Card */}
           <Pressable
-            onPress={() => router.push("/(student)/pending?filter=pending")}
+            onPress={() => router.push("/(student)/pending")}
             style={styles.halfCard}
           >
             <Card style={styles.statCard}>

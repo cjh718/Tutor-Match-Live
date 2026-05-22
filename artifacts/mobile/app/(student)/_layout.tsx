@@ -87,6 +87,7 @@ export default function StudentTabLayout() {
           headerShown: true,
         }}
       />
+      
       <Tabs.Screen
         name="completed"
         options={{
