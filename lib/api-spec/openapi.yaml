@@ -865,7 +865,7 @@ components:
           $ref: "#/components/schemas/User"
         bidCount:
           type: integer
-      required: [questionId, studentId, title, description, subject, preferredDuration, status, createdDate, bidCount]
+      required: [questionId, studentId, title, description, subject, status, createdDate, bidCount]
 
     CreateQuestionRequest:
       type: object
@@ -893,6 +893,9 @@ components:
           type: string
         optionalBudget:
           type: number
+          nullable: true
+        attachmentUrl:
+          type: string
           nullable: true
         status:
           type: string

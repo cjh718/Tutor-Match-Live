@@ -23,7 +23,7 @@ export default function EditQuestionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const { data: question, isLoading } = useGetQuestion(questionId, {
     query: {
@@ -39,6 +39,7 @@ export default function EditQuestionScreen() {
   const [subject, setSubject] = useState("");
   const [budget, setBudget] = useState("");
   const [attachment, setAttachment] = useState<{ uri: string; name: string; type: string } | null>(null);
+  const [attachmentChanged, setAttachmentChanged] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function EditQuestionScreen() {
             }
           : null,
       );
+      setAttachmentChanged(false);
     }
   }, [question]);
 
@@ -74,6 +76,7 @@ export default function EditQuestionScreen() {
           name: asset.name,
           type: asset.mimeType || "application/octet-stream",
         });
+        setAttachmentChanged(true);
       }
     } catch {
       Alert.alert("Error", "Failed to select file.");
@@ -97,7 +100,7 @@ export default function EditQuestionScreen() {
 
     try {
       let attachmentUrl = question?.attachmentUrl ?? null;
-      if (attachment && attachment.uri !== question?.attachmentUrl) {
+      if (attachmentChanged && attachment) {
         const formData = new FormData();
         formData.append("file", {
           uri: attachment.uri,
@@ -106,6 +109,7 @@ export default function EditQuestionScreen() {
         } as any);
         const response = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/upload`, {
           method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           body: formData,
         });
         const data = await response.json();
@@ -227,7 +231,7 @@ export default function EditQuestionScreen() {
           <View style={styles.attachmentRow}>
             <Feather name="file" size={16} color={colors.primary} />
             <Text style={[styles.attachmentText, { color: colors.foreground }]} numberOfLines={1}>{attachment.name}</Text>
-            <Pressable onPress={() => setAttachment(null)}>
+            <Pressable onPress={() => { setAttachment(null); setAttachmentChanged(true); }}>
               <Feather name="x" size={18} color={colors.destructive} />
             </Pressable>
           </View>

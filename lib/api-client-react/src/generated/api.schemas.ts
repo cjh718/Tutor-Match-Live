@@ -132,6 +132,7 @@ export interface UpdateQuestionRequest {
   description?: string;
   subject?: string;
   optionalBudget?: number | null;
+  attachmentUrl?: string | null;
   status?: UpdateQuestionRequestStatus;
 }
 

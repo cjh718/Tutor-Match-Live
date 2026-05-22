@@ -18,11 +18,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PostQuestionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   const createQuestion = useCreateQuestion();
 
   const [title, setTitle] = useState("");
@@ -75,6 +77,7 @@ export default function PostQuestionScreen() {
 
       const response = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/upload`, {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,
       });
 
