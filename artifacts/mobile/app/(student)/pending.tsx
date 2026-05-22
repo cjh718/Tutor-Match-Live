@@ -66,8 +66,8 @@ export default function StudentUpcomingSessionsScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="calendar"
-            title="Upcoming Sessions"
-            description="Confirmed sessions will appear here."
+            title="Pending Tutor"
+            description="Sessions waiting for tutor confirmation."
           />
         }
         renderItem={({ item: s }) => (
