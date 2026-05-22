@@ -96,8 +96,6 @@ export interface Question {
   description: string;
   subject: string;
   attachmentUrl?: string | null;
-  /** Duration in minutes */
-  preferredDuration: number;
   optionalBudget?: number | null;
   status: QuestionStatus;
   createdDate: string;
@@ -110,7 +108,6 @@ export interface CreateQuestionRequest {
   description: string;
   subject: string;
   attachmentUrl?: string;
-  preferredDuration: number;
   optionalBudget?: number;
 }
 
@@ -129,7 +126,6 @@ export interface UpdateQuestionRequest {
   title?: string;
   description?: string;
   subject?: string;
-  preferredDuration?: number;
   optionalBudget?: number | null;
   status?: UpdateQuestionRequestStatus;
 }
