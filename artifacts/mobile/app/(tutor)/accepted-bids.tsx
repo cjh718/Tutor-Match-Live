@@ -47,7 +47,10 @@ export default function TutorAcceptedBidsScreen() {
     {
       query: {
         enabled: !!user?.userId,
-        queryKey: getGetBidsQueryKey({ tutorId: user?.userId, status: "Accepted" }),
+        queryKey: getGetBidsQueryKey({
+          tutorId: user?.userId,
+          status: "Accepted",
+        }),
       },
     },
   );
@@ -94,7 +97,9 @@ export default function TutorAcceptedBidsScreen() {
       const session = sessionMap.get(bid.questionId);
       return { bid, session: session ?? null };
     })
-    .filter((item) => item.session !== null);
+    .filter(
+      (item) => item.session !== null && item.session.status === "Matched",
+    );
 
   const sorted = [...bidRows].sort(
     (a, b) =>
@@ -155,7 +160,8 @@ export default function TutorAcceptedBidsScreen() {
                   style={[styles.title, { color: colors.foreground }]}
                   numberOfLines={1}
                 >
-                  {item.session?.question?.title ?? `Question #${item.bid.questionId}`}
+                  {item.session?.question?.title ??
+                    `Question #${item.bid.questionId}`}
                 </Text>
                 <Badge
                   label={item.session?.status ?? "Confirmed"}
@@ -166,8 +172,14 @@ export default function TutorAcceptedBidsScreen() {
               </View>
               {item.session?.student && (
                 <View style={styles.metaRow}>
-                  <Feather name="user" size={13} color={colors.mutedForeground} />
-                  <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                  <Feather
+                    name="user"
+                    size={13}
+                    color={colors.mutedForeground}
+                  />
+                  <Text
+                    style={[styles.metaText, { color: colors.mutedForeground }]}
+                  >
                     {item.session.student.name}
                   </Text>
                 </View>
@@ -225,7 +237,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   price: { fontSize: 14, fontWeight: "700" },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
   actionBadge: {
     marginTop: 6,
     paddingHorizontal: 10,

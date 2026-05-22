@@ -45,6 +45,7 @@ function statusVariant(status: string) {
   if (status === "Open") return "blue";
   if (status === "BidReceived") return "blue";
   if (status === "Scheduled" || status === "Confirmed") return "success";
+  if (status === "Matched" ) return "success";
   if (status === "Completed") return "outline";
   return "destructive";
 }

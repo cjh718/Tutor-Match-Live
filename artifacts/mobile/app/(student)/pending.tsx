@@ -25,7 +25,7 @@ export default function StudentUpcomingSessionsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
 
-  const queryParams = { studentId: user?.userId, status: 'Confirmed' as const };
+  const queryParams = { studentId: user?.userId, status: 'Matched' as const };
 
   const { data: sessions, isLoading, refetch, isRefetching } = useGetSessions(
     queryParams,
