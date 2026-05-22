@@ -83,8 +83,10 @@ export type QuestionStatus =
 
 export const QuestionStatus = {
   Open: "Open",
+  BidReceived: "BidReceived",
   Matched: "Matched",
-  Scheduled: "Scheduled",
+  PendingConfirmation: "PendingConfirmation",
+  Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",
 } as const;
@@ -95,6 +97,7 @@ export interface Question {
   title: string;
   description: string;
   subject: string;
+  /** Duration in minutes */
   attachmentUrl?: string | null;
   optionalBudget?: number | null;
   status: QuestionStatus;
@@ -116,8 +119,10 @@ export type UpdateQuestionRequestStatus =
 
 export const UpdateQuestionRequestStatus = {
   Open: "Open",
+  BidReceived: "BidReceived",
   Matched: "Matched",
-  Scheduled: "Scheduled",
+  PendingConfirmation: "PendingConfirmation",
+  Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",
 } as const;
@@ -144,7 +149,6 @@ export interface Bid {
   tutorId: number;
   price: number;
   message: string;
-  /** Duration in minutes */
   status: BidStatus;
   createdDate: string;
   tutor?: User;
@@ -173,7 +177,7 @@ export interface UpdateBidRequest {
 export type SessionStatus = (typeof SessionStatus)[keyof typeof SessionStatus];
 
 export const SessionStatus = {
-  Pending_Confirmation: "Pending Confirmation",
+  PendingConfirmation: "PendingConfirmation",
   Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",
@@ -204,7 +208,7 @@ export type UpdateSessionRequestStatus =
   (typeof UpdateSessionRequestStatus)[keyof typeof UpdateSessionRequestStatus];
 
 export const UpdateSessionRequestStatus = {
-  Pending_Confirmation: "Pending Confirmation",
+  PendingConfirmation: "PendingConfirmation",
   Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",
@@ -292,8 +296,10 @@ export type GetQuestionsStatus =
 
 export const GetQuestionsStatus = {
   Open: "Open",
+  BidReceived: "BidReceived",
   Matched: "Matched",
-  Scheduled: "Scheduled",
+  PendingConfirmation: "PendingConfirmation",
+  Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",
 } as const;
@@ -322,7 +328,7 @@ export type GetSessionsStatus =
   (typeof GetSessionsStatus)[keyof typeof GetSessionsStatus];
 
 export const GetSessionsStatus = {
-  Pending_Confirmation: "Pending Confirmation",
+  PendingConfirmation: "PendingConfirmation",
   Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",

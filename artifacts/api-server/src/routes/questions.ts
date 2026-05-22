@@ -178,14 +178,12 @@ router.put(
       title,
       description,
       subject,
-      preferredDuration,
       optionalBudget,
     } = req.body as {
       status?: string;
       title?: string;
       description?: string;
       subject?: string;
-      preferredDuration?: number;
       optionalBudget?: number | null;
     };
 

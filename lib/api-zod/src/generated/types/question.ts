@@ -14,9 +14,8 @@ export interface Question {
   title: string;
   description: string;
   subject: string;
-  attachmentUrl?: string | null;
   /** Duration in minutes */
-  preferredDuration: number;
+  attachmentUrl?: string | null;
   optionalBudget?: number | null;
   status: QuestionStatus;
   createdDate: Date;

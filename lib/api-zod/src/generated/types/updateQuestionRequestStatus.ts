@@ -11,8 +11,10 @@ export type UpdateQuestionRequestStatus =
 
 export const UpdateQuestionRequestStatus = {
   Open: "Open",
+  BidReceived: "BidReceived",
   Matched: "Matched",
-  Scheduled: "Scheduled",
+  PendingConfirmation: "PendingConfirmation",
+  Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",
 } as const;

@@ -163,7 +163,15 @@ export const UpdateTutorProfileResponse = zod.object({
  */
 export const GetQuestionsQueryParams = zod.object({
   status: zod
-    .enum(["Open", "Matched", "Scheduled", "Completed", "Cancelled"])
+    .enum([
+      "Open",
+      "BidReceived",
+      "Matched",
+      "PendingConfirmation",
+      "Confirmed",
+      "Completed",
+      "Cancelled",
+    ])
     .optional(),
   subject: zod.coerce.string().optional(),
   studentId: zod.coerce.number().optional(),
@@ -175,10 +183,17 @@ export const GetQuestionsResponseItem = zod.object({
   title: zod.string(),
   description: zod.string(),
   subject: zod.string(),
-  attachmentUrl: zod.string().nullish(),
-  preferredDuration: zod.number().describe("Duration in minutes"),
+  attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
   optionalBudget: zod.number().nullish(),
-  status: zod.enum(["Open", "Matched", "Scheduled", "Completed", "Cancelled"]),
+  status: zod.enum([
+    "Open",
+    "BidReceived",
+    "Matched",
+    "PendingConfirmation",
+    "Confirmed",
+    "Completed",
+    "Cancelled",
+  ]),
   createdDate: zod.coerce.date(),
   student: zod
     .object({
@@ -203,7 +218,6 @@ export const CreateQuestionBody = zod.object({
   description: zod.string(),
   subject: zod.string(),
   attachmentUrl: zod.string().optional(),
-  preferredDuration: zod.number(),
   optionalBudget: zod.number().optional(),
 });
 
@@ -220,10 +234,17 @@ export const GetQuestionResponse = zod.object({
   title: zod.string(),
   description: zod.string(),
   subject: zod.string(),
-  attachmentUrl: zod.string().nullish(),
-  preferredDuration: zod.number().describe("Duration in minutes"),
+  attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
   optionalBudget: zod.number().nullish(),
-  status: zod.enum(["Open", "Matched", "Scheduled", "Completed", "Cancelled"]),
+  status: zod.enum([
+    "Open",
+    "BidReceived",
+    "Matched",
+    "PendingConfirmation",
+    "Confirmed",
+    "Completed",
+    "Cancelled",
+  ]),
   createdDate: zod.coerce.date(),
   student: zod
     .object({
@@ -250,10 +271,17 @@ export const UpdateQuestionBody = zod.object({
   title: zod.string().optional(),
   description: zod.string().optional(),
   subject: zod.string().optional(),
-  preferredDuration: zod.number().optional(),
   optionalBudget: zod.number().nullish(),
   status: zod
-    .enum(["Open", "Matched", "Scheduled", "Completed", "Cancelled"])
+    .enum([
+      "Open",
+      "BidReceived",
+      "Matched",
+      "PendingConfirmation",
+      "Confirmed",
+      "Completed",
+      "Cancelled",
+    ])
     .optional(),
 });
 
@@ -263,10 +291,17 @@ export const UpdateQuestionResponse = zod.object({
   title: zod.string(),
   description: zod.string(),
   subject: zod.string(),
-  attachmentUrl: zod.string().nullish(),
-  preferredDuration: zod.number().describe("Duration in minutes"),
+  attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
   optionalBudget: zod.number().nullish(),
-  status: zod.enum(["Open", "Matched", "Scheduled", "Completed", "Cancelled"]),
+  status: zod.enum([
+    "Open",
+    "BidReceived",
+    "Matched",
+    "PendingConfirmation",
+    "Confirmed",
+    "Completed",
+    "Cancelled",
+  ]),
   createdDate: zod.coerce.date(),
   student: zod
     .object({
@@ -500,13 +535,14 @@ export const GetSessionsResponseItem = zod.object({
       title: zod.string(),
       description: zod.string(),
       subject: zod.string(),
-      attachmentUrl: zod.string().nullish(),
-      preferredDuration: zod.number().describe("Duration in minutes"),
+      attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
       optionalBudget: zod.number().nullish(),
       status: zod.enum([
         "Open",
+        "BidReceived",
         "Matched",
-        "Scheduled",
+        "PendingConfirmation",
+        "Confirmed",
         "Completed",
         "Cancelled",
       ]),
@@ -588,13 +624,14 @@ export const GetSessionResponse = zod.object({
       title: zod.string(),
       description: zod.string(),
       subject: zod.string(),
-      attachmentUrl: zod.string().nullish(),
-      preferredDuration: zod.number().describe("Duration in minutes"),
+      attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
       optionalBudget: zod.number().nullish(),
       status: zod.enum([
         "Open",
+        "BidReceived",
         "Matched",
-        "Scheduled",
+        "PendingConfirmation",
+        "Confirmed",
         "Completed",
         "Cancelled",
       ]),
@@ -676,13 +713,14 @@ export const UpdateSessionResponse = zod.object({
       title: zod.string(),
       description: zod.string(),
       subject: zod.string(),
-      attachmentUrl: zod.string().nullish(),
-      preferredDuration: zod.number().describe("Duration in minutes"),
+      attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
       optionalBudget: zod.number().nullish(),
       status: zod.enum([
         "Open",
+        "BidReceived",
         "Matched",
-        "Scheduled",
+        "PendingConfirmation",
+        "Confirmed",
         "Completed",
         "Cancelled",
       ]),
@@ -788,11 +826,11 @@ export const GetStudentDashboardParams = zod.object({
 
 export const GetStudentDashboardResponse = zod.object({
   openQuestions: zod.number(),
-  bidsReceived: zod.number(),        // ✅ Updated from pendingBids
-  pendingTutors: zod.number(),       // ✅ Updated from pendingConfirmation
-  upcomingSessions: zod.number(),    // ✅ Updated from scheduledSessions
+  matchedQuestions: zod.number(),
+  scheduledSessions: zod.number(),
   completedSessions: zod.number(),
   totalSpent: zod.number(),
+  pendingBids: zod.number(),
   recentQuestions: zod.array(
     zod.object({
       questionId: zod.number(),
@@ -800,13 +838,14 @@ export const GetStudentDashboardResponse = zod.object({
       title: zod.string(),
       description: zod.string(),
       subject: zod.string(),
-      attachmentUrl: zod.string().nullish(),
-      preferredDuration: zod.number().describe("Duration in minutes"),
+      attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
       optionalBudget: zod.number().nullish(),
       status: zod.enum([
         "Open",
+        "BidReceived",
         "Matched",
-        "Scheduled",
+        "PendingConfirmation",
+        "Confirmed",
         "Completed",
         "Cancelled",
       ]),
@@ -825,7 +864,7 @@ export const GetStudentDashboardResponse = zod.object({
       bidCount: zod.number(),
     }),
   ),
-  upcomingSessionsList: zod.array(
+  upcomingSessions: zod.array(
     zod.object({
       sessionId: zod.number(),
       questionId: zod.number(),
@@ -870,13 +909,14 @@ export const GetStudentDashboardResponse = zod.object({
           title: zod.string(),
           description: zod.string(),
           subject: zod.string(),
-          attachmentUrl: zod.string().nullish(),
-          preferredDuration: zod.number().describe("Duration in minutes"),
+          attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
           optionalBudget: zod.number().nullish(),
           status: zod.enum([
             "Open",
+            "BidReceived",
             "Matched",
-            "Scheduled",
+            "PendingConfirmation",
+            "Confirmed",
             "Completed",
             "Cancelled",
           ]),
@@ -909,7 +949,7 @@ export const GetTutorDashboardParams = zod.object({
 export const GetTutorDashboardResponse = zod.object({
   openBids: zod.number(),
   acceptedBids: zod.number(),
-  upcomingSessions: zod.number(),    // ✅ Updated from scheduledSessions
+  scheduledSessions: zod.number(),
   completedSessions: zod.number(),
   totalEarned: zod.number(),
   averageRating: zod.number(),
@@ -956,7 +996,7 @@ export const GetTutorDashboardResponse = zod.object({
         .optional(),
     }),
   ),
-  upcomingSessionsList: zod.array(
+  upcomingSessions: zod.array(
     zod.object({
       sessionId: zod.number(),
       questionId: zod.number(),
@@ -1001,13 +1041,14 @@ export const GetTutorDashboardResponse = zod.object({
           title: zod.string(),
           description: zod.string(),
           subject: zod.string(),
-          attachmentUrl: zod.string().nullish(),
-          preferredDuration: zod.number().describe("Duration in minutes"),
+          attachmentUrl: zod.string().nullish().describe("Duration in minutes"),
           optionalBudget: zod.number().nullish(),
           status: zod.enum([
             "Open",
+            "BidReceived",
             "Matched",
-            "Scheduled",
+            "PendingConfirmation",
+            "Confirmed",
             "Completed",
             "Cancelled",
           ]),

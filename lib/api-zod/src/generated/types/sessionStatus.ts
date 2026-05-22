@@ -9,7 +9,7 @@
 export type SessionStatus = (typeof SessionStatus)[keyof typeof SessionStatus];
 
 export const SessionStatus = {
-  Pending_Confirmation: "Pending Confirmation",
+  PendingConfirmation: "PendingConfirmation",
   Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",

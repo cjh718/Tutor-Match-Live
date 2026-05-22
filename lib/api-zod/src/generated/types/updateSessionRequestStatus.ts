@@ -10,7 +10,7 @@ export type UpdateSessionRequestStatus =
   (typeof UpdateSessionRequestStatus)[keyof typeof UpdateSessionRequestStatus];
 
 export const UpdateSessionRequestStatus = {
-  Pending_Confirmation: "Pending Confirmation",
+  PendingConfirmation: "PendingConfirmation",
   Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",

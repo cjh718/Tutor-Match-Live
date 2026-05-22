@@ -11,6 +11,5 @@ export interface CreateQuestionRequest {
   description: string;
   subject: string;
   attachmentUrl?: string;
-  preferredDuration: number;
   optionalBudget?: number;
 }

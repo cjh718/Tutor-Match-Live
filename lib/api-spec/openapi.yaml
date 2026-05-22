@@ -851,8 +851,6 @@ components:
         attachmentUrl:
           type: string
           nullable: true
-        preferredDuration:
-          type: integer
           description: Duration in minutes
         optionalBudget:
           type: number

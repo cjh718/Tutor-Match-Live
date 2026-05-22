@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, Alert } from "react-native";
+import { ScrollView, StyleSheet, Text, Alert, View, Pressable } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   useGetQuestion,
@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/Input";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { View } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
+import * as DocumentPicker from "expo-document-picker";
+import { Feather } from "@expo/vector-icons";
 
 export default function EditQuestionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -37,6 +38,7 @@ export default function EditQuestionScreen() {
   const [description, setDescription] = useState("");
   const [subject, setSubject] = useState("");
   const [budget, setBudget] = useState("");
+  const [attachment, setAttachment] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -47,8 +49,36 @@ export default function EditQuestionScreen() {
       setBudget(
         question.optionalBudget != null ? String(question.optionalBudget) : "",
       );
+      setAttachment(
+        question.attachmentUrl
+          ? {
+              uri: question.attachmentUrl,
+              name: question.attachmentUrl.split("/").pop() ?? "attachment",
+              type: "application/octet-stream",
+            }
+          : null,
+      );
     }
   }, [question]);
+
+  const pickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "image/*", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+        copyToCacheDirectory: true,
+      });
+      if (result.assets?.[0]) {
+        const asset = result.assets[0];
+        setAttachment({
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType || "application/octet-stream",
+        });
+      }
+    } catch {
+      Alert.alert("Error", "Failed to select file.");
+    }
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -66,6 +96,22 @@ export default function EditQuestionScreen() {
     }
 
     try {
+      let attachmentUrl = question?.attachmentUrl ?? null;
+      if (attachment && attachment.uri !== question?.attachmentUrl) {
+        const formData = new FormData();
+        formData.append("file", {
+          uri: attachment.uri,
+          name: attachment.name,
+          type: attachment.type,
+        } as any);
+        const response = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || "Failed to upload attachment");
+        attachmentUrl = data.url;
+      }
       await updateQuestion.mutateAsync({
         questionId,
         data: {
@@ -73,6 +119,7 @@ export default function EditQuestionScreen() {
           description: description.trim(),
           subject: subject.trim(),
           optionalBudget: budget ? parseFloat(budget) : null,
+          attachmentUrl: attachmentUrl ?? undefined,
         },
       });
       await queryClient.invalidateQueries({
@@ -174,6 +221,20 @@ export default function EditQuestionScreen() {
         onChangeText={setBudget}
         keyboardType="decimal-pad"
       />
+      <View style={{ marginTop: 16 }}>
+        <Text style={{ color: colors.foreground, marginBottom: 8, fontWeight: "500" }}>Attachment</Text>
+        {attachment ? (
+          <View style={styles.attachmentRow}>
+            <Feather name="file" size={16} color={colors.primary} />
+            <Text style={[styles.attachmentText, { color: colors.foreground }]} numberOfLines={1}>{attachment.name}</Text>
+            <Pressable onPress={() => setAttachment(null)}>
+              <Feather name="x" size={18} color={colors.destructive} />
+            </Pressable>
+          </View>
+        ) : (
+          <Button title="Replace Attachment" variant="outline" onPress={pickFile} />
+        )}
+      </View>
 
       <Button
         title="Save Changes"
@@ -198,4 +259,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20 },
   heading: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
   subheading: { fontSize: 14, lineHeight: 20, marginBottom: 4 },
+  attachmentRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10 },
+  attachmentText: { flex: 1, fontSize: 13 },
 });
