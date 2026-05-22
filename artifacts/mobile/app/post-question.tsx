@@ -8,7 +8,7 @@ import {
   Pressable,
 } from "react-native";
 import { router } from "expo-router";
-import { useCreateQuestion } from "@workspace/api-client-react";
+import { useCreateQuestion, customFetch } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -75,19 +75,11 @@ export default function PostQuestionScreen() {
         type: attachment.type,
       } as any);
 
-      const response = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/upload`, {
+      const response = await customFetch<{ url: string }>("/api/upload", {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,
       });
-
-      const data = await response.json();
-      if (response.ok) {
-        return data.url;
-      } else {
-        Alert.alert("Error", "Failed to upload file");
-        return undefined;
-      }
+      return response.url;
     } catch (error) {
       console.error("Upload error:", error);
       Alert.alert("Error", "Failed to upload file");

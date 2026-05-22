@@ -6,6 +6,7 @@ import {
   useUpdateQuestion,
   getGetQuestionQueryKey,
   getGetQuestionsQueryKey,
+  customFetch,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { Button } from "@/components/ui/Button";
@@ -23,7 +24,7 @@ export default function EditQuestionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
 
   const { data: question, isLoading } = useGetQuestion(questionId, {
     query: {
@@ -107,13 +108,10 @@ export default function EditQuestionScreen() {
           name: attachment.name,
           type: attachment.type,
         } as any);
-        const response = await fetch(`https://${process.env.EXPO_PUBLIC_DOMAIN}/api/upload`, {
+        const data = await customFetch<{ url: string }>("/api/upload", {
           method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           body: formData,
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data?.error || "Failed to upload attachment");
         attachmentUrl = data.url;
       }
       await updateQuestion.mutateAsync({
