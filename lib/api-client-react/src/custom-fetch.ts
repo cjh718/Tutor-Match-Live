@@ -360,7 +360,15 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  // Convert Headers instance to a plain object for React Native compatibility.
+  // React Native's fetch polyfill can silently drop headers when a Headers
+  // instance is passed, causing Content-Type to be missing on the server.
+  const headersPlain: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    headersPlain[key] = value;
+  });
+
+  const response = await fetch(input, { ...init, method, headers: headersPlain });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
