@@ -25,4 +25,4 @@ router.use(notificationsRouter);
 router.use(dashboardRouter);
 router.use(adminRouter);
 
-export default router;
+export default router;import uploadRouter from "./upload";

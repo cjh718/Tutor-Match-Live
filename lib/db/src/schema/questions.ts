@@ -10,7 +10,6 @@ export const questionsTable = pgTable("questions", {
   description: text("description").notNull(),
   subject: text("subject").notNull(),
   attachmentUrl: text("attachment_url"),
-  preferredDuration: integer("preferred_duration").notNull(),
   optionalBudget: real("optional_budget"),
   status: text("status", {
     enum: ["Open", "BidReceived", "Scheduled", "Completed", "Cancelled"],

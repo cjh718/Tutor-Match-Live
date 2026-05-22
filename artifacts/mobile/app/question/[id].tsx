@@ -31,6 +31,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Linking } from "react-native";
 
 function formatSGT(dateStr: string | Date | null | undefined) {
   if (!dateStr) return "TBD";
@@ -393,6 +394,24 @@ export default function QuestionDetailScreen() {
         <Text style={[styles.description, { color: colors.mutedForeground }]}>
           {question.description}
         </Text>
+
+        {/* ATTACHMENT - Add this block */}
+        {question.attachmentUrl && (
+          <Pressable 
+            onPress={() => {
+              // Use Linking to open the URL
+              Linking.openURL(question.attachmentUrl);
+            }}
+            style={styles.attachmentRow}
+          >
+            <Feather name="paperclip" size={14} color={colors.primary} />
+            <Text style={[styles.attachmentText, { color: colors.primary }]}>
+              View Attachment
+            </Text>
+            <Feather name="external-link" size={12} color={colors.primary} />
+          </Pressable>
+        )}
+        
         <View style={styles.qMeta}>
           {question.optionalBudget != null && (
             <View style={styles.metaItem}>
@@ -1019,4 +1038,20 @@ const styles = StyleSheet.create({
   },
   bidMetaText: { fontSize: 12 },
   bidMessage: { fontSize: 14, lineHeight: 20 },
+
+  attachmentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  attachmentText: {
+    fontSize: 14,
+    fontWeight: "500",
+    textDecorationLine: "underline",
+  },
+  
 });

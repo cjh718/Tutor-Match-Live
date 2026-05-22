@@ -84,7 +84,7 @@ router.post("/questions", authMiddleware, async (req, res): Promise<void> => {
     optionalBudget?: number;
   };
 
-  if (!title || !description || !subject || !preferredDuration) {
+  if (!title || !description || !subject ) {
     res.status(400).json({ error: "Missing required fields" });
     return;
   }
@@ -97,7 +97,6 @@ router.post("/questions", authMiddleware, async (req, res): Promise<void> => {
       description,
       subject,
       attachmentUrl: attachmentUrl ?? null,
-      preferredDuration,
       optionalBudget: optionalBudget ?? null,
     })
     .returning();

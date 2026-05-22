@@ -115,7 +115,6 @@ export default function PostQuestionScreen() {
           title: title.trim(),
           description: description.trim(),
           subject: subject.trim(),
-          preferredDuration: 60,
           optionalBudget: budget ? parseFloat(budget) : undefined,
           attachmentUrl,
         },
