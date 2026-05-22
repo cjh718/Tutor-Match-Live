@@ -73,14 +73,12 @@ router.post("/questions", authMiddleware, async (req, res): Promise<void> => {
     description,
     subject,
     attachmentUrl,
-    preferredDuration,
     optionalBudget,
   } = req.body as {
     title?: string;
     description?: string;
     subject?: string;
     attachmentUrl?: string;
-    preferredDuration?: number;
     optionalBudget?: number;
   };
 
@@ -207,8 +205,6 @@ router.put(
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
       if (subject !== undefined) updateData.subject = subject;
-      if (preferredDuration !== undefined)
-        updateData.preferredDuration = preferredDuration;
       if (optionalBudget !== undefined)
         updateData.optionalBudget = optionalBudget;
     }

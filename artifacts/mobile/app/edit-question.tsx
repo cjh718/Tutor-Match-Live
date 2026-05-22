@@ -36,7 +36,6 @@ export default function EditQuestionScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [subject, setSubject] = useState("");
-  const [duration, setDuration] = useState("");
   const [budget, setBudget] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -45,7 +44,6 @@ export default function EditQuestionScreen() {
       setTitle(question.title);
       setDescription(question.description);
       setSubject(question.subject);
-      setDuration(String(question.preferredDuration));
       setBudget(
         question.optionalBudget != null ? String(question.optionalBudget) : "",
       );
@@ -57,8 +55,6 @@ export default function EditQuestionScreen() {
     if (!title.trim()) e.title = "Title is required";
     if (!description.trim()) e.description = "Description is required";
     if (!subject.trim()) e.subject = "Subject is required";
-    const dur = parseInt(duration, 10);
-    if (!duration || isNaN(dur) || dur < 15) e.duration = "Minimum 15 minutes";
     return e;
   };
 
@@ -76,7 +72,6 @@ export default function EditQuestionScreen() {
           title: title.trim(),
           description: description.trim(),
           subject: subject.trim(),
-          preferredDuration: parseInt(duration, 10),
           optionalBudget: budget ? parseFloat(budget) : null,
         },
       });
