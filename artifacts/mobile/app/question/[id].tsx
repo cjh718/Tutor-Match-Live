@@ -404,11 +404,8 @@ export default function QuestionDetailScreen() {
           <Pressable
             onPress={() => {
               let fullUrl = question.attachmentUrl;
-              // Rewrite legacy /uploads/ paths to /api/uploads/ so the proxy routes them
+              // If the URL is relative, prepend the base URL
               if (fullUrl.startsWith('/uploads/')) {
-                fullUrl = fullUrl.replace('/uploads/', '/api/uploads/');
-              }
-              if (fullUrl.startsWith('/api/uploads/')) {
                 const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
                 fullUrl = `${baseUrl}${fullUrl}`;
               }
