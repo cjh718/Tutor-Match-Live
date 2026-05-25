@@ -4,6 +4,8 @@ import {
   usersTable,
   questionsTable,
   bidsTable,
+  paymentsTable,
+  tutorEarningsTable,
 } from "@workspace/db";
 import { and, eq, SQL } from "drizzle-orm";
 import { Router, type IRouter } from "express";
@@ -185,6 +187,53 @@ router.put(
         .update(questionsTable)
         .set({ status: "Completed" })
         .where(eq(questionsTable.questionId, session.questionId));
+
+      // Credit tutor wallet — payment must exist for this accepted bid
+      const [bid] = await db
+        .select()
+        .from(bidsTable)
+        .where(
+          and(
+            eq(bidsTable.questionId, session.questionId),
+            eq(bidsTable.status, "Accepted"),
+          ),
+        );
+      if (bid) {
+        const [payment] = await db
+          .select()
+          .from(paymentsTable)
+          .where(eq(paymentsTable.bidId, bid.bidId));
+        if (payment && payment.status === "Succeeded") {
+          const [earnings] = await db
+            .select()
+            .from(tutorEarningsTable)
+            .where(eq(tutorEarningsTable.tutorId, payment.tutorId));
+          if (earnings) {
+            await db
+              .update(tutorEarningsTable)
+              .set({
+                totalEarned: earnings.totalEarned + payment.tutorAmount,
+                balance: earnings.balance + payment.tutorAmount,
+              })
+              .where(eq(tutorEarningsTable.tutorId, payment.tutorId));
+          } else {
+            await db.insert(tutorEarningsTable).values({
+              tutorId: payment.tutorId,
+              totalEarned: payment.tutorAmount,
+              totalWithdrawn: 0,
+              balance: payment.tutorAmount,
+            });
+          }
+
+          await notify({
+            userId: payment.tutorId,
+            type: "payment_received",
+            title: "Payment received!",
+            message: `You earned SGD ${payment.tutorAmount.toFixed(2)} for "${question.title}". Check your wallet.`,
+            relatedId: payment.paymentId,
+          });
+        }
+      }
 
       await notify({
         userId: session.studentId,
