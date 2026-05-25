@@ -34,9 +34,10 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res): 
       return;
     }
 
-    // Return a relative URL under /api so the Replit proxy routes the request
-    // to the API server artifact.
-    const fileUrl = `/api/uploads/${req.file.filename}`;
+    // Return a relative URL so the client resolves it against its own domain.
+    // (The previous absolute URL used req.get('host') which yielded localhost
+    // when behind the Replit proxy, breaking mobile/Expo clients.)
+    const fileUrl = `/uploads/${req.file.filename}`;
 
     res.json({ url: fileUrl });
   } catch (error) {
