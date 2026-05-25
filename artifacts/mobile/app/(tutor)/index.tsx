@@ -136,6 +136,24 @@ export default function TutorDashboardScreen() {
             </Card>
           </Pressable>
 
+          {/* Wallet Card */}
+          <Pressable
+            onPress={() => router.push("/wallet")}
+            style={styles.halfCard}
+          >
+            <Card style={styles.statCard}>
+              <Feather name="dollar-sign" size={24} color={colors.primary} />
+              <Text style={[styles.statValue, { color: colors.foreground }]}>
+                Wallet
+              </Text>
+              <Text
+                style={[styles.statLabel, { color: colors.mutedForeground }]}
+              >
+                View Balance{"\n"}& Withdraw
+              </Text>
+            </Card>
+          </Pressable>
+
           {/* Total Completed Card */}
           <Pressable
             onPress={() => router.push("/(tutor)/completed")}

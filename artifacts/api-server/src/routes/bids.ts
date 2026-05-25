@@ -198,15 +198,6 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
       return;
     }
 
-    // Determine the final confirmed time
-    let finalTime: Date;
-    if (selectedTime === "specific" && existing.specificTime) {
-      finalTime = new Date(existing.specificTime);
-    } else {
-      // "now" or fallback
-      finalTime = new Date();
-    }
-
     // Reject all other pending bids for this question
     await db
       .update(bidsTable)
@@ -218,19 +209,10 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
         ),
       );
 
-    // Auto-create session as Matched
-    await db.insert(sessionsTable).values({
-      questionId: existing.questionId,
-      studentId: question.studentId,
-      tutorId: existing.tutorId,
-      finalTime,
-      status: "Matched",  
-    });
-
-    // Update question to Matched
+    // Update question to Scheduled (pending payment)
     await db
       .update(questionsTable)
-      .set({ status: "Matched" })
+      .set({ status: "Scheduled" })
       .where(eq(questionsTable.questionId, existing.questionId));
 
     const [student] = await db
@@ -246,7 +228,7 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
       userId: existing.tutorId,
       type: "bid_accepted",
       title: "Your bid was accepted",
-      message: `${student.name} accepted your bid on "${question.title}" — session time: ${timeLabel}`,
+      message: `${student.name} accepted your bid on "${question.title}" — session time: ${timeLabel}. Payment pending.`,
       relatedId: bidId,
     });
   }

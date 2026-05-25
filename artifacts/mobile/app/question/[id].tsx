@@ -214,13 +214,14 @@ export default function QuestionDetailScreen() {
         selectedTime === "now" ? "Now" : formatSGT(bid.specificTime);
       Alert.alert(
         "Accept this bid?",
-        `Session time: ${timeLabel}\nAll other bids will be rejected.`,
+        `Session time: ${timeLabel}\nPrice: SGD ${bid.price.toFixed(2)}\nAll other bids will be rejected.`,
         [
           { text: "Cancel", style: "cancel" },
           {
-            text: "Accept",
+            text: "Accept & Pay",
             onPress: async () => {
               try {
+                // First accept the bid
                 await updateBid.mutateAsync({
                   bidId: bid.bidId,
                   data: { status: "Accepted", selectedTime } as any,
@@ -231,10 +232,16 @@ export default function QuestionDetailScreen() {
                 await queryClient.invalidateQueries({
                   queryKey: getGetQuestionQueryKey(questionId),
                 });
-                Alert.alert(
-                  "Session Confirmed!",
-                  `Your session is scheduled for ${timeLabel}. Check your Sessions tab.`,
-                );
+                // Navigate to payment screen
+                router.push({
+                  pathname: "/payment",
+                  params: {
+                    bidId: String(bid.bidId),
+                    amount: String(bid.price),
+                    tutorName: bid.tutor?.name || "Tutor",
+                    questionTitle: question?.title || "Question",
+                  },
+                });
               } catch {
                 Alert.alert("Error", "Failed to accept bid.");
               }

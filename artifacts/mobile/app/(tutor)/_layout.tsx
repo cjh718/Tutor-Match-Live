@@ -98,6 +98,15 @@ export default function TutorTabLayout() {
           ),
         }}
       />
+      {/* HIDE wallet tab - accessible via dashboard */}
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          href: null,
+          title: "Wallet",
+          headerShown: true,
+        }}
+      />
       <Tabs.Screen
         name="profile"
         options={{

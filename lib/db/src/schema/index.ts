@@ -5,3 +5,6 @@ export * from "./bids";
 export * from "./sessions";
 export * from "./reviews";
 export * from "./notifications";
+export * from "./payments";
+export * from "./tutor_earnings";
+export * from "./withdrawals";

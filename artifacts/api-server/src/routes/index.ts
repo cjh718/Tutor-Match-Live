@@ -11,6 +11,8 @@ import notificationsRouter from "./notifications";
 import dashboardRouter from "./dashboard";
 import adminRouter from "./admin";
 import uploadRouter from "./upload";
+import paymentsRouter from "./payments";
+import walletRouter from "./wallet";
 
 const router: IRouter = Router();
 
@@ -26,5 +28,7 @@ router.use(notificationsRouter);
 router.use(dashboardRouter);
 router.use(adminRouter);
 router.use(uploadRouter);
+router.use(paymentsRouter);
+router.use(walletRouter);
 
 export default router;

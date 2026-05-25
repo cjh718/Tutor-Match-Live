@@ -44,6 +44,9 @@ function RootLayoutNav() {
         <Stack.Screen name="session/[id]" options={{ title: "Session", headerShown: true }} />
         <Stack.Screen name="notifications" options={{ title: "Notifications", headerShown: true }} />
         <Stack.Screen name="edit-question" options={{ title: "Edit Question", headerShown: true }} />
+        <Stack.Screen name="payment" options={{ title: "Payment", headerShown: true }} />
+        <Stack.Screen name="wallet" options={{ title: "Wallet", headerShown: true }} />
+        <Stack.Screen name="withdraw" options={{ title: "Withdraw Funds", headerShown: true }} />
       </Stack>
     </>
   );

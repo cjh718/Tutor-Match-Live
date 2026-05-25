@@ -11,6 +11,7 @@ export const usersTable = pgTable("users", {
   rating: real("rating"),
   suspended: boolean("suspended").notNull().default(false),
   pushToken: text("push_token"),
+  stripeCustomerId: text("stripe_customer_id"),
   createdDate: timestamp("created_date", { withTimezone: true }).notNull().defaultNow(),
 });
 
