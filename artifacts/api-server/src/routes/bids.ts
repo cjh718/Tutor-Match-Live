@@ -216,10 +216,16 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
       .where(eq(bidsTable.bidId, bidId));
 
     // ✅ Create a session with "Matched" status
+    const finalTime =
+      selectedTime === "specific" && existing.specificTime
+        ? new Date(existing.specificTime)
+        : new Date();
+
     await db.insert(sessionsTable).values({
       questionId: existing.questionId,
       studentId: question.studentId,
       tutorId: existing.tutorId,
+      finalTime,
       status: "Matched",
     });
 
