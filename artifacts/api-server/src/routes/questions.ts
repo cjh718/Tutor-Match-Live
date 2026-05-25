@@ -2,6 +2,8 @@ import { db, questionsTable, usersTable, bidsTable, sessionsTable } from "@works
 import { and, count, eq, SQL } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { authMiddleware } from "../middlewares/auth";
+import fs from "fs";
+import path from "path";
 
 const router: IRouter = Router();
 
@@ -236,7 +238,7 @@ router.put(
   },
 );
 
-// ========== ADD THIS DELETE ENDPOINT ==========
+// ========== DELETE ENDPOINT WITH ATTACHMENT DELETION ==========
 router.delete(
   "/questions/:questionId",
   authMiddleware,
@@ -277,6 +279,26 @@ router.delete(
       return;
     }
 
+    // ✅ DELETE ATTACHMENT FILE FROM SERVER
+    if (existing.attachmentUrl) {
+      // Get just the filename from the URL (e.g., "photo.jpg")
+      const filename = existing.attachmentUrl.split('/').pop();
+      // Look for the file in artifacts/uploads/
+      const filePath = path.join(__dirname, "../../../uploads", filename);
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`Deleted attachment: ${filePath}`);
+      } else {
+        // Also check the old location just in case
+        const oldFilePath = path.join(__dirname, "../../uploads", filename);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+          console.log(`Deleted attachment from old location: ${oldFilePath}`);
+        }
+      }
+    }
+
     // ✅ DELETE RELATED BIDS FIRST
     await db
       .delete(bidsTable)
@@ -295,6 +317,6 @@ router.delete(
     res.status(204).send();
   },
 );
-// ========== END OF ADDED DELETE ENDPOINT ==========
+// ========== END OF DELETE ENDPOINT ==========
 
 export default router;

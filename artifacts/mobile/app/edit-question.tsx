@@ -51,11 +51,17 @@ export default function EditQuestionScreen() {
       setBudget(
         question.optionalBudget != null ? String(question.optionalBudget) : "",
       );
+      // Rewrite legacy /uploads/ paths to /api/uploads/ for the proxy
+      const displayUrl = question.attachmentUrl
+        ? question.attachmentUrl.startsWith("/uploads/")
+          ? question.attachmentUrl.replace("/uploads/", "/api/uploads/")
+          : question.attachmentUrl
+        : null;
       setAttachment(
-        question.attachmentUrl
+        displayUrl
           ? {
-              uri: question.attachmentUrl,
-              name: question.attachmentUrl.split("/").pop() ?? "attachment",
+              uri: displayUrl,
+              name: displayUrl.split("/").pop() ?? "attachment",
               type: "application/octet-stream",
             }
           : null,

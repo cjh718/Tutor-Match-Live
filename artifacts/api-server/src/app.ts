@@ -30,8 +30,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files (PDFs, images, etc.)
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// Serve uploaded files under /api so the Replit proxy routes them to this server.
+// (The proxy only forwards /api/* paths to the API artifact.)
+app.use("/api/uploads", express.static(path.join(__dirname, "../../uploads")));
 
 app.use("/api", router);
 
