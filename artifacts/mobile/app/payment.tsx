@@ -141,11 +141,11 @@ export default function PaymentScreen() {
 
       <View style={{ marginTop: 24 }}>
         <Button
-          title={paying ? "Processing..." : "Pay with Card"}
+          title={paying ? "Processing..." : clientSecret ? "Pay with Card" : "Confirm Payment"}
           variant="primary"
           onPress={confirmPayment}
           loading={paying}
-          disabled={!clientSecret && paying}
+          disabled={paying}
         />
         <Button
           title="Cancel"
@@ -156,7 +156,9 @@ export default function PaymentScreen() {
       </View>
 
       <Text style={[styles.note, { color: colors.mutedForeground }]}>
-        Payment is processed securely by Stripe. Your card details are never stored on our servers.
+        {clientSecret
+          ? "Payment is processed securely by Stripe. Your card details are never stored on our servers."
+          : "Manual payment mode — no real charge. Tutor will be credited immediately on confirm."}
       </Text>
     </ScrollView>
   );

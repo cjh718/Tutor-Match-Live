@@ -24,6 +24,11 @@ async function safeStripeClient() {
 }
 import { notify } from "../lib/notify";
 
+// Toggle this to enable/disable Stripe payments
+// When false: payments are auto-confirmed (manual mode for testing)
+// When true: Stripe PaymentIntents are created (real payments)
+const USE_STRIPE = false;
+
 const PLATFORM_COMMISSION_PCT = 0.10;
 const CURRENCY = "sgd";
 
@@ -87,55 +92,62 @@ router.post("/payments", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  // Get or create Stripe customer for student
+  // Get student info
   const [student] = await db
     .select()
     .from(usersTable)
     .where(eq(usersTable.userId, req.user!.userId));
 
-  let customerId = student.stripeCustomerId;
-  if (!customerId) {
+  const amount = bid.price;
+  const platformFee = Math.round(amount * PLATFORM_COMMISSION_PCT * 100) / 100;
+  const tutorAmount = Math.round((amount - platformFee) * 100) / 100;
+
+  let stripePaymentIntentId: string | null = null;
+  let clientSecret: string | null = null;
+
+  if (USE_STRIPE) {
+    // Create Stripe customer if needed
+    let customerId = student.stripeCustomerId;
+    if (!customerId) {
+      let stripe;
+      try { stripe = await safeStripeClient(); } catch (e: any) {
+        res.status(503).json({ error: e.message });
+        return;
+      }
+      const customer = await stripe.customers.create({
+        email: student.email,
+        name: student.name,
+        metadata: { userId: String(student.userId) },
+      });
+      customerId = customer.id;
+      await db
+        .update(usersTable)
+        .set({ stripeCustomerId: customerId })
+        .where(eq(usersTable.userId, student.userId));
+    }
+
     let stripe;
     try { stripe = await safeStripeClient(); } catch (e: any) {
       res.status(503).json({ error: e.message });
       return;
     }
-    const customer = await stripe.customers.create({
-      email: student.email,
-      name: student.name,
-      metadata: { userId: String(student.userId) },
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100),
+      currency: CURRENCY,
+      customer: customerId,
+      metadata: {
+        bidId: String(bidId),
+        studentId: String(student.userId),
+        tutorId: String(bid.tutorId),
+        questionId: String(question.questionId),
+        platformFee: String(platformFee),
+        tutorAmount: String(tutorAmount),
+      },
+      automatic_payment_methods: { enabled: true },
     });
-    customerId = customer.id;
-    await db
-      .update(usersTable)
-      .set({ stripeCustomerId: customerId })
-      .where(eq(usersTable.userId, student.userId));
+    stripePaymentIntentId = paymentIntent.id;
+    clientSecret = paymentIntent.client_secret;
   }
-
-  const amount = bid.price;
-  const platformFee = Math.round(amount * PLATFORM_COMMISSION_PCT * 100) / 100;
-  const tutorAmount = Math.round((amount - platformFee) * 100) / 100;
-
-  // Create PaymentIntent
-  let stripe;
-  try { stripe = await safeStripeClient(); } catch (e: any) {
-    res.status(503).json({ error: e.message });
-    return;
-  }
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(amount * 100), // cents
-    currency: CURRENCY,
-    customer: customerId,
-    metadata: {
-      bidId: String(bidId),
-      studentId: String(student.userId),
-      tutorId: String(bid.tutorId),
-      questionId: String(question.questionId),
-      platformFee: String(platformFee),
-      tutorAmount: String(tutorAmount),
-    },
-    automatic_payment_methods: { enabled: true },
-  });
 
   // Create payment record
   const [payment] = await db
@@ -147,14 +159,14 @@ router.post("/payments", authMiddleware, async (req, res): Promise<void> => {
       amount,
       platformFee,
       tutorAmount,
-      stripePaymentIntentId: paymentIntent.id,
-      status: "Pending",
+      stripePaymentIntentId,
+      status: USE_STRIPE ? "Pending" : "Processing",
     })
     .returning();
 
   res.json({
     paymentId: payment.paymentId,
-    clientSecret: paymentIntent.client_secret,
+    clientSecret,
     amount,
     platformFee,
     tutorAmount,
@@ -188,94 +200,98 @@ router.post("/payments/:paymentId/confirm", authMiddleware, async (req, res): Pr
     return;
   }
 
-  // Verify with Stripe
-  let stripe;
-  try { stripe = await safeStripeClient(); } catch (e: any) {
-    res.status(503).json({ error: e.message });
-    return;
-  }
-  const intent = await stripe.paymentIntents.retrieve(payment.stripePaymentIntentId!);
-
-  if (intent.status === "succeeded") {
-    // Update payment status
-    await db
-      .update(paymentsTable)
-      .set({ status: "Succeeded" })
-      .where(eq(paymentsTable.paymentId, paymentId));
-
-    // Credit tutor wallet
-    const [earnings] = await db
-      .select()
-      .from(tutorEarningsTable)
-      .where(eq(tutorEarningsTable.tutorId, payment.tutorId));
-    if (earnings) {
+  // In manual mode (USE_STRIPE=false), skip Stripe verification and auto-confirm
+  if (USE_STRIPE && payment.stripePaymentIntentId) {
+    let stripe;
+    try { stripe = await safeStripeClient(); } catch (e: any) {
+      res.status(503).json({ error: e.message });
+      return;
+    }
+    const intent = await stripe.paymentIntents.retrieve(payment.stripePaymentIntentId);
+    if (intent.status !== "succeeded") {
+      if (intent.status === "requires_payment_method" || intent.status === "canceled") {
+        await db
+          .update(paymentsTable)
+          .set({ status: "Failed" })
+          .where(eq(paymentsTable.paymentId, paymentId));
+        res.status(400).json({ status: "Failed", message: "Payment failed or was cancelled" });
+        return;
+      }
       await db
-        .update(tutorEarningsTable)
-        .set({
-          totalEarned: earnings.totalEarned + payment.tutorAmount,
-          balance: earnings.balance + payment.tutorAmount,
-        })
-        .where(eq(tutorEarningsTable.tutorId, payment.tutorId));
-    } else {
-      await db.insert(tutorEarningsTable).values({
-        tutorId: payment.tutorId,
-        totalEarned: payment.tutorAmount,
-        totalWithdrawn: 0,
-        balance: payment.tutorAmount,
-      });
+        .update(paymentsTable)
+        .set({ status: "Processing" })
+        .where(eq(paymentsTable.paymentId, paymentId));
+      res.json({ status: "Processing", paymentId });
+      return;
     }
-
-    // Create session
-    const [bid] = await db
-      .select()
-      .from(bidsTable)
-      .where(eq(bidsTable.bidId, payment.bidId));
-    const [question] = await db
-      .select()
-      .from(questionsTable)
-      .where(eq(questionsTable.questionId, bid.questionId));
-
-    let finalTime = new Date();
-    if (bid.specificTime) {
-      finalTime = new Date(bid.specificTime);
-    }
-
-    await db.insert(sessionsTable).values({
-      questionId: bid.questionId,
-      studentId: question.studentId,
-      tutorId: bid.tutorId,
-      finalTime,
-      status: "Confirmed",
-    });
-
-    await db
-      .update(questionsTable)
-      .set({ status: "Scheduled" })
-      .where(eq(questionsTable.questionId, bid.questionId));
-
-    // Notify tutor
-    await notify({
-      userId: payment.tutorId,
-      type: "payment_received",
-      title: "Payment received!",
-      message: `You earned SGD ${payment.tutorAmount.toFixed(2)} for "${question.title}". Check your wallet.`,
-      relatedId: paymentId,
-    });
-
-    res.json({ status: "Succeeded", paymentId });
-  } else if (intent.status === "requires_payment_method" || intent.status === "canceled") {
-    await db
-      .update(paymentsTable)
-      .set({ status: "Failed" })
-      .where(eq(paymentsTable.paymentId, paymentId));
-    res.status(400).json({ status: "Failed", message: "Payment failed or was cancelled" });
-  } else {
-    await db
-      .update(paymentsTable)
-      .set({ status: "Processing" })
-      .where(eq(paymentsTable.paymentId, paymentId));
-    res.json({ status: "Processing", paymentId });
   }
+
+  // Mark payment succeeded and credit tutor wallet
+  await db
+    .update(paymentsTable)
+    .set({ status: "Succeeded" })
+    .where(eq(paymentsTable.paymentId, paymentId));
+
+  // Credit tutor wallet
+  const [earnings] = await db
+    .select()
+    .from(tutorEarningsTable)
+    .where(eq(tutorEarningsTable.tutorId, payment.tutorId));
+  if (earnings) {
+    await db
+      .update(tutorEarningsTable)
+      .set({
+        totalEarned: earnings.totalEarned + payment.tutorAmount,
+        balance: earnings.balance + payment.tutorAmount,
+      })
+      .where(eq(tutorEarningsTable.tutorId, payment.tutorId));
+  } else {
+    await db.insert(tutorEarningsTable).values({
+      tutorId: payment.tutorId,
+      totalEarned: payment.tutorAmount,
+      totalWithdrawn: 0,
+      balance: payment.tutorAmount,
+    });
+  }
+
+  // Create session
+  const [bid] = await db
+    .select()
+    .from(bidsTable)
+    .where(eq(bidsTable.bidId, payment.bidId));
+  const [question] = await db
+    .select()
+    .from(questionsTable)
+    .where(eq(questionsTable.questionId, bid.questionId));
+
+  let finalTime = new Date();
+  if (bid.specificTime) {
+    finalTime = new Date(bid.specificTime);
+  }
+
+  await db.insert(sessionsTable).values({
+    questionId: bid.questionId,
+    studentId: question.studentId,
+    tutorId: bid.tutorId,
+    finalTime,
+    status: "Confirmed",
+  });
+
+  await db
+    .update(questionsTable)
+    .set({ status: "Scheduled" })
+    .where(eq(questionsTable.questionId, bid.questionId));
+
+  // Notify tutor
+  await notify({
+    userId: payment.tutorId,
+    type: "payment_received",
+    title: "Payment received!",
+    message: `You earned SGD ${payment.tutorAmount.toFixed(2)} for "${question.title}". Check your wallet.`,
+    relatedId: paymentId,
+  });
+
+  res.json({ status: "Succeeded", paymentId });
 });
 
 // GET /api/payments - List student's payments
