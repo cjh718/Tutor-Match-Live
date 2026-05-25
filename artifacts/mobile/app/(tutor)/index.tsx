@@ -136,24 +136,6 @@ export default function TutorDashboardScreen() {
             </Card>
           </Pressable>
 
-          {/* Wallet Card */}
-          <Pressable
-            onPress={() => router.push("/wallet")}
-            style={styles.halfCard}
-          >
-            <Card style={styles.statCard}>
-              <Feather name="dollar-sign" size={24} color={colors.primary} />
-              <Text style={[styles.statValue, { color: colors.foreground }]}>
-                Wallet
-              </Text>
-              <Text
-                style={[styles.statLabel, { color: colors.mutedForeground }]}
-              >
-                View Balance{"\n"}& Withdraw
-              </Text>
-            </Card>
-          </Pressable>
-
           {/* Total Completed Card */}
           <Pressable
             onPress={() => router.push("/(tutor)/completed")}
@@ -174,18 +156,18 @@ export default function TutorDashboardScreen() {
         </View>
       </View>
 
-      {/* Earned Section */}
-      <View style={styles.earnedContainer}>
+      {/* Earned Section - Clickable to Wallet */}
+      <Pressable onPress={() => router.push("/wallet")}>
         <Card style={styles.earnedCard}>
           <Feather name="dollar-sign" size={24} color={colors.accent} />
           <Text style={[styles.earnedValue, { color: colors.accent }]}>
             SGD {dashboard?.totalEarned || 0}
           </Text>
           <Text style={[styles.earnedLabel, { color: colors.mutedForeground }]}>
-            Total Earned
+            Total Earned (Tap to view wallet)
           </Text>
         </Card>
-      </View>
+      </Pressable>
 
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
         Recent Bids

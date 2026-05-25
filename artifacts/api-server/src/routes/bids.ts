@@ -209,10 +209,24 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
         ),
       );
 
-    // Update question to Scheduled (pending payment)
+    // ✅ Update the accepted bid to "Accepted"
+    await db
+      .update(bidsTable)
+      .set({ status: "Accepted" })
+      .where(eq(bidsTable.bidId, bidId));
+
+    // ✅ Create a session with "Matched" status
+    await db.insert(sessionsTable).values({
+      questionId: existing.questionId,
+      studentId: question.studentId,
+      tutorId: existing.tutorId,
+      status: "Matched",
+    });
+
+    // ✅ Update question to "Matched"
     await db
       .update(questionsTable)
-      .set({ status: "Scheduled" })
+      .set({ status: "Matched" })
       .where(eq(questionsTable.questionId, existing.questionId));
 
     const [student] = await db
@@ -228,7 +242,7 @@ router.put("/bids/:bidId", authMiddleware, async (req, res): Promise<void> => {
       userId: existing.tutorId,
       type: "bid_accepted",
       title: "Your bid was accepted",
-      message: `${student.name} accepted your bid on "${question.title}" — session time: ${timeLabel}. Payment pending.`,
+      message: `${student.name} accepted your bid on "${question.title}" — session time: ${timeLabel}.`,
       relatedId: bidId,
     });
   }
