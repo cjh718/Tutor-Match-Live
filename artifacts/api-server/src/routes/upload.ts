@@ -31,7 +31,12 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res): 
       res.status(400).json({ error: "No file uploaded" });
       return;
     }
+
+    // Return a relative URL so the client resolves it against its own domain.
+    // (The previous absolute URL used req.get('host') which yielded localhost
+    // when behind the Replit proxy, breaking mobile/Expo clients.)
     const fileUrl = `/uploads/${req.file.filename}`;
+
     res.json({ url: fileUrl });
   } catch (error) {
     console.error("Upload error:", error);

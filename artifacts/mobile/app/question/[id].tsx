@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Platform,
   Pressable,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -32,6 +33,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Linking } from "react-native";
+import { WebView } from "react-native-webview";
 
 function formatSGT(dateStr: string | Date | null | undefined) {
   if (!dateStr) return "TBD";
@@ -162,6 +164,8 @@ export default function QuestionDetailScreen() {
   });
   const [showSpecificDatePicker, setShowSpecificDatePicker] = useState(false);
   const [showSpecificTimePicker, setShowSpecificTimePicker] = useState(false);
+  const [showFileViewer, setShowFileViewer] = useState(false);
+  const [fileUrl, setFileUrl] = useState("");
 
   const myBid = isTutor
     ? bids?.find((b) => b.tutorId === user?.userId)
@@ -395,12 +399,21 @@ export default function QuestionDetailScreen() {
           {question.description}
         </Text>
 
-        {/* ATTACHMENT - Add this block */}
+        {/* ATTACHMENT */}
         {question.attachmentUrl && (
-          <Pressable 
+          <Pressable
             onPress={() => {
-              // Use Linking to open the URL
-              Linking.openURL(question.attachmentUrl);
+              let fullUrl = question.attachmentUrl;
+              if (fullUrl.startsWith('/uploads/')) {
+                const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+                fullUrl = `${baseUrl}${fullUrl}`;
+              }
+              if (Platform.OS === 'web') {
+                Linking.openURL(fullUrl);
+              } else {
+                setFileUrl(fullUrl);
+                setShowFileViewer(true);
+              }
             }}
             style={styles.attachmentRow}
           >
@@ -408,7 +421,7 @@ export default function QuestionDetailScreen() {
             <Text style={[styles.attachmentText, { color: colors.primary }]}>
               View Attachment
             </Text>
-            <Feather name="external-link" size={12} color={colors.primary} />
+            <Feather name="eye" size={14} color={colors.primary} />
           </Pressable>
         )}
         
@@ -956,6 +969,37 @@ export default function QuestionDetailScreen() {
           )}
         </>
       )}
+
+      {/* File Viewer Modal */}
+      <Modal
+        visible={showFileViewer}
+        animationType="slide"
+        onRequestClose={() => setShowFileViewer(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            padding: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: colors.foreground }}>
+              Attachment
+            </Text>
+            <Pressable onPress={() => setShowFileViewer(false)}>
+              <Feather name="x" size={24} color={colors.foreground} />
+            </Pressable>
+          </View>
+          <WebView 
+            source={{ uri: fileUrl }}
+            startInLoadingState={true}
+            scalesPageToFit={true}
+            style={{ flex: 1 }}
+          />
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
