@@ -89,7 +89,7 @@ router.post("/payments", authMiddleware, async (req, res): Promise<void> => {
     return;
   }
 
-  // Get student info
+  // Get student infoadmin/payments/:paymentId/verify
   const [student] = await db
     .select()
     .from(usersTable)
@@ -289,10 +289,57 @@ router.put("/admin/payments/:paymentId/verify", authMiddleware, async (req, res)
     return;
   }
 
+  // Update payment status
   await db
     .update(paymentsTable)
     .set({ status: "Succeeded" })
     .where(eq(paymentsTable.paymentId, paymentId));
+
+  // ✅ CREDIT TUTOR WALLET HERE
+  // Check if session is completed, or just credit immediately
+  const [bid] = await db
+    .select()
+    .from(bidsTable)
+    .where(eq(bidsTable.bidId, payment.bidId));
+
+  if (bid) {
+    const [earnings] = await db
+      .select()
+      .from(tutorEarningsTable)
+      .where(eq(tutorEarningsTable.tutorId, payment.tutorId));
+
+    if (earnings) {
+      await db
+        .update(tutorEarningsTable)
+        .set({
+          totalEarned: earnings.totalEarned + payment.tutorAmount,
+          balance: earnings.balance + payment.tutorAmount,
+        })
+        .where(eq(tutorEarningsTable.tutorId, payment.tutorId));
+    } else {
+      await db.insert(tutorEarningsTable).values({
+        tutorId: payment.tutorId,
+        totalEarned: payment.tutorAmount,
+        totalWithdrawn: 0,
+        balance: payment.tutorAmount,
+      });
+    }
+
+    // Get question title for notification
+    const [question] = await db
+      .select()
+      .from(questionsTable)
+      .where(eq(questionsTable.questionId, bid.questionId));
+
+    const { notify } = await import("../lib/notify");
+    await notify({
+      userId: payment.tutorId,
+      type: "payment_received",
+      title: "Payment received!",
+      message: `You earned SGD ${payment.tutorAmount.toFixed(2)} for "${question?.title || 'your session'}". Check your wallet.`,
+      relatedId: payment.paymentId,
+    });
+  }
 
   res.json({ status: "Succeeded", paymentId });
 });

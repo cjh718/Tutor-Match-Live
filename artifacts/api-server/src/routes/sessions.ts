@@ -203,7 +203,7 @@ router.put(
           .select()
           .from(paymentsTable)
           .where(eq(paymentsTable.bidId, bid.bidId));
-        if (payment && payment.status === "Succeeded") {
+        if (payment && (payment.status === "Succeeded" || payment.status === "Paid" || payment.status === "Processing")) {
           const [earnings] = await db
             .select()
             .from(tutorEarningsTable)
