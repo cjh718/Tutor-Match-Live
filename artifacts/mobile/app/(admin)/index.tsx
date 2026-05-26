@@ -10,6 +10,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
+import { router } from 'expo-router';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -101,6 +102,20 @@ export default function AdminDashboard() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={{ padding: 16, paddingBottom: 0 }}>
+        <Pressable
+          onPress={() => router.push('/(admin)/payments')}
+          style={[styles.paymentsCard, { backgroundColor: colors.muted }]}
+        >
+          <View style={styles.paymentsCardContent}>
+            <Feather name="credit-card" size={20} color={colors.primary} />
+            <Text style={[styles.paymentsCardText, { color: colors.foreground }]}>
+              Payments & Withdrawals
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+        </Pressable>
+      </View>
       <FlatList
         data={users}
         keyExtractor={(item) => item.userId.toString()}
@@ -165,5 +180,22 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  paymentsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  paymentsCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  paymentsCardText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

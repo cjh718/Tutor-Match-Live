@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Alert, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Alert, ActivityIndicator, ScrollView, Clipboard, Pressable } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/hooks/useColors";
@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { customFetch } from "@workspace/api-client-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 
 export default function PaymentScreen() {
   const { user } = useAuth();
@@ -20,8 +21,7 @@ export default function PaymentScreen() {
   }>();
 
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [paymentId, setPaymentId] = useState<number | null>(null);
   const [paymentInfo, setPaymentInfo] = useState<{
     amount: number;
@@ -31,10 +31,10 @@ export default function PaymentScreen() {
 
   useEffect(() => {
     if (!bidId) return;
-    createPaymentIntent();
+    createPaymentRecord();
   }, [bidId]);
 
-  const createPaymentIntent = async () => {
+  const createPaymentRecord = async () => {
     try {
       setLoading(true);
       const res: any = await customFetch("/api/payments", {
@@ -43,7 +43,6 @@ export default function PaymentScreen() {
         headers: { "Content-Type": "application/json" },
       });
       setPaymentId(res.paymentId);
-      setClientSecret(res.clientSecret);
       setPaymentInfo({
         amount: res.amount,
         platformFee: res.platformFee,
@@ -56,30 +55,30 @@ export default function PaymentScreen() {
     }
   };
 
-  const confirmPayment = async () => {
+  const handlePaid = async () => {
     if (!paymentId) return;
     try {
-      setPaying(true);
-      // For web preview: simulate payment confirmation since Stripe SDK needs native
-      const res: any = await customFetch(`/api/payments/${paymentId}/confirm`, {
+      setMarkingPaid(true);
+      const res: any = await customFetch(`/api/payments/${paymentId}/paid`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
 
-      if (res.status === "Succeeded") {
-        Alert.alert(
-          "Payment Successful!",
-          `SGD ${Number(amount).toFixed(2)} paid. Your session is confirmed.`,
-          [{ text: "OK", onPress: () => router.replace("/(student)") }]
-        );
-      } else {
-        Alert.alert("Processing", "Payment is being processed. Check back shortly.");
-      }
+      Alert.alert(
+        "Payment Submitted",
+        `You've marked the payment as paid via PayNow.\n\nReference: TM-${res.paymentId}\n\nAdmin will verify your transfer within 1-2 business days.`,
+        [{ text: "OK", onPress: () => router.replace("/(student)") }]
+      );
     } catch (err: any) {
-      Alert.alert("Payment Failed", err.message || "Could not confirm payment.");
+      Alert.alert("Error", err.message || "Could not mark payment as paid.");
     } finally {
-      setPaying(false);
+      setMarkingPaid(false);
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    Clipboard.setString(text);
+    Alert.alert("Copied", "PayNow number copied to clipboard");
   };
 
   if (loading) {
@@ -89,6 +88,9 @@ export default function PaymentScreen() {
       </View>
     );
   }
+
+  const paynowNumber = "88755849";
+  const refCode = paymentId ? `TM-${paymentId}` : "";
 
   return (
     <ScrollView
@@ -139,13 +141,58 @@ export default function PaymentScreen() {
         </View>
       </Card>
 
+      <Card style={[styles.paynowCard, { backgroundColor: colors.muted }]}>
+        <Text style={[styles.paynowTitle, { color: colors.foreground }]}>
+          Pay via PayNow
+        </Text>
+        <Text style={[styles.paynowSubtitle, { color: colors.mutedForeground }]}>
+          Transfer the exact amount to the number below using your bank app
+        </Text>
+
+        <View style={styles.paynowRow}>
+          <View>
+            <Text style={[styles.paynowLabel, { color: colors.mutedForeground }]}>PayNow Number</Text>
+            <Text style={[styles.paynowValue, { color: colors.foreground }]}>{paynowNumber}</Text>
+          </View>
+          <Pressable onPress={() => copyToClipboard(paynowNumber)}>
+            <Feather name="copy" size={20} color={colors.primary} />
+          </Pressable>
+        </View>
+
+        <View style={styles.paynowRow}>
+          <View>
+            <Text style={[styles.paynowLabel, { color: colors.mutedForeground }]}>Amount</Text>
+            <Text style={[styles.paynowValue, { color: colors.foreground }]}>
+              SGD {Number(amount).toFixed(2)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.paynowRow}>
+          <View>
+            <Text style={[styles.paynowLabel, { color: colors.mutedForeground }]}>Reference</Text>
+            <Text style={[styles.paynowValue, { color: colors.foreground }]}>{refCode}</Text>
+          </View>
+          <Pressable onPress={() => copyToClipboard(refCode)}>
+            <Feather name="copy" size={20} color={colors.primary} />
+          </Pressable>
+        </View>
+
+        <View style={[styles.warningBox, { backgroundColor: colors.warning + "20" }]}>
+          <Feather name="alert-circle" size={16} color={colors.warning} />
+          <Text style={[styles.warningText, { color: colors.warning }]}>
+            Please include the reference code in your transfer so we can verify it.
+          </Text>
+        </View>
+      </Card>
+
       <View style={{ marginTop: 24 }}>
         <Button
-          title={paying ? "Processing..." : clientSecret ? "Pay with Card" : "Confirm Payment"}
+          title={markingPaid ? "Submitting..." : "I Have Paid via PayNow"}
           variant="primary"
-          onPress={confirmPayment}
-          loading={paying}
-          disabled={paying}
+          onPress={handlePaid}
+          loading={markingPaid}
+          disabled={markingPaid}
         />
         <Button
           title="Cancel"
@@ -156,9 +203,7 @@ export default function PaymentScreen() {
       </View>
 
       <Text style={[styles.note, { color: colors.mutedForeground }]}>
-        {clientSecret
-          ? "Payment is processed securely by Stripe. Your card details are never stored on our servers."
-          : "Manual payment mode — no real charge. Tutor will be credited immediately on confirm."}
+        Your payment will be verified by our admin within 1-2 business days. You'll receive a notification once confirmed.
       </Text>
     </ScrollView>
   );
@@ -175,5 +220,20 @@ const styles = StyleSheet.create({
   totalRow: { borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 12, marginTop: 4 },
   totalLabel: { fontSize: 16, fontWeight: "600" },
   totalValue: { fontSize: 18, fontWeight: "700" },
+  paynowCard: { padding: 16, marginTop: 20, gap: 16 },
+  paynowTitle: { fontSize: 18, fontWeight: "600" },
+  paynowSubtitle: { fontSize: 14, marginTop: 2, lineHeight: 20 },
+  paynowRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  paynowLabel: { fontSize: 12 },
+  paynowValue: { fontSize: 16, fontWeight: "600", marginTop: 2 },
+  warningBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  warningText: { fontSize: 12, flex: 1, lineHeight: 18 },
   note: { fontSize: 12, textAlign: "center", marginTop: 24, lineHeight: 18 },
 });

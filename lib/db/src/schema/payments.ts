@@ -20,7 +20,7 @@ export const paymentsTable = pgTable("payments", {
   tutorAmount: real("tutor_amount").notNull(),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   status: text("status", {
-    enum: ["Pending", "Processing", "Succeeded", "Failed", "Refunded"],
+    enum: ["Pending", "Processing", "Paid", "Succeeded", "Failed", "Refunded"],
   })
     .notNull()
     .default("Pending"),

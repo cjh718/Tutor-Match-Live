@@ -19,6 +19,7 @@ export type RegisterRequestRole =
 export const RegisterRequestRole = {
   student: "student",
   tutor: "tutor",
+  admin: "admin",
 } as const;
 
 export interface RegisterRequest {

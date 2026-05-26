@@ -21,7 +21,7 @@ export const RegisterUserBody = zod.object({
   name: zod.string(),
   email: zod.string().email(),
   password: zod.string(),
-  role: zod.enum(["student", "tutor"]),
+  role: zod.enum(["student", "tutor", "admin"]),
 });
 
 /**
@@ -272,6 +272,7 @@ export const UpdateQuestionBody = zod.object({
   description: zod.string().optional(),
   subject: zod.string().optional(),
   optionalBudget: zod.number().nullish(),
+  attachmentUrl: zod.string().nullish(),
   status: zod
     .enum([
       "Open",

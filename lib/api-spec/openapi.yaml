@@ -744,7 +744,7 @@ components:
           type: string
         role:
           type: string
-          enum: [student, tutor]
+          enum: [student, tutor, admin]
       required: [name, email, password, role]
 
     LoginRequest:
